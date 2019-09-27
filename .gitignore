@@ -1,0 +1,6 @@
+x86
+machine
+*.ko
+*.o
+*~
+export_syms
