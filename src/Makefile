@@ -1,10 +1,10 @@
 # Makefile for FreeBSD Kernel Module
 
 # Name of kernel module
-KMOD = hello
+KMOD = middfs
 
 # Source files for kernel module
-SRCS = hello.c
+SRCS = middfs.c
 
 .include <bsd.kmod.mk>
 
