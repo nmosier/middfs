@@ -1,10 +1,15 @@
-# Makefile for FreeBSD Kernel Module
+SRCS = hello.c
+OBJS = $(SRCS:.c=.o)
+BIN = hello
 
-# Name of kernel module
-KMOD = middfs
+CFLAGS = -c `pkg-config fuse3 --cflags`
+LDLIBS = `pkg-config fuse3 --libs`
 
-# Source files for kernel module
-SRCS = middfs.c
+# TODO -- C header file dependencies
 
-.include <bsd.kmod.mk>
+$(BIN): $(OBJS)
+	$(CC) $(LDLIBS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -o $@ $<
 
