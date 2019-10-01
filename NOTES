@@ -1,0 +1,6 @@
+FUSE
+* All FUSE file operations (the ones we implement)
+  take only ABSOLUTE PATHS.
+  See reference: https://www.cs.cmu.edu/~./fp/courses/15213-s07/
+		 lectures/15-filesys/index.html
+
