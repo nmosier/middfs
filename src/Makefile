@@ -1,8 +1,8 @@
-SRCS = hello.c
+SRCS = middfs-client.c
 OBJS = $(SRCS:.c=.o)
-BIN = hello
+BIN = middfs-client
 
-CFLAGS = -c `pkg-config fuse3 --cflags`
+CFLAGS = -c `pkg-config fuse3 --cflags` -g
 LDLIBS = `pkg-config fuse3 --libs`
 
 # TODO -- C header file dependencies
