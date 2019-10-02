@@ -1,0 +1,8 @@
+middfs TODO
+
+GOALS
+[ ] write basic client middfs that mirrors directory hardlinked to
+    ~/.middfs-d/<username>
+[ ] client middfs also creates ~/.middfs-d/<username> on startup
+    if necessary
+
