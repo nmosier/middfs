@@ -17,6 +17,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+
+
 /* defaults */
 #define MIDDFS_CONF_DIR ".middfs-d"
 #define MIDDFS_CONF_MIRROR "mirror"
@@ -522,7 +524,7 @@ void middfs_defaultopts(struct middfs_opts *opts) {
 int middfs_mirror_mount(const char *dir, const char *mirror) {
   char *cmd;
   int retv = 0;
-  asprintf(&cmd, "sudo mount_nullfs %s %s", dir, mirror);
+  asprintf(&cmd, "mount_nullfs %s %s", dir, mirror);
   fprintf(stderr, "%s\n", cmd); /* log command before execution (like Makefiles) */
   if (system(cmd) != 0) {
     fprintf(stderr, "middfs: error mounting mirror to %s at %s\n",
@@ -530,6 +532,20 @@ int middfs_mirror_mount(const char *dir, const char *mirror) {
     retv = -1;
   }
   
+  free(cmd);
+  return retv;
+}
+
+int middfs_mirror_unmount(const char *mirror) {
+  char *cmd;
+  int retv= 0;
+  asprintf(&cmd, "umount %s", mirror);
+  fprintf(stderr, "%s\n", cmd);
+  if (system(cmd) != 0) {
+    fprintf(stderr, "middfs: error unmounting mirror at %s\n", mirror);
+    retv = -1;
+  }
+
   free(cmd);
   return retv;
 }
@@ -593,6 +609,9 @@ int main(int argc, char *argv[]) {
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
+  if (middfs_mirror_unmount(middfs_opts.mirror_dir) < 0) {
+    retv = -1;
+  }
   fuse_opt_free_args(&args);
   return retv;
 }
