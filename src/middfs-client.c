@@ -61,6 +61,33 @@ char *middfs_localpath(const char *middfs_path) {
   return localpath;
 }
 
+/* middfs_abspath() -- convert a relative path into an absolute path
+ * ARGS:
+ *  - path: a pointer to a dynamically allocated string
+ * RETV: the absolute path is placed at *path (i.e. it is modified
+ *       in-place). The original string at *path is freed.
+ *       Upon success, 0 is returned; otherwise, -errno is returned.
+ */
+int middfs_abspath(char **path) {
+  char *cwd, *relpath;
+
+  switch ((*path)[0]) {
+  case '/': /* already an absolute path */
+    return 0;
+    
+  case '\0': /* empty string is not a valid path */
+    return -EINVAL;
+
+  default: /* prepend current working directory to _path_ */
+    if ((cwd = getcwd(NULL, 0)) == NULL) {
+      return -errno;
+    }
+    relpath = *path;
+    asprintf(path, "%s/%s", cwd, relpath);
+    free(relpath);
+    return 0;
+  }
+}
 
 
 /* file I/O function definitions */
@@ -89,9 +116,19 @@ static int middfs_getattr(const char *path, struct stat *stbuf,
   /* obtain actual path through mirror */
   char *localpath = middfs_localpath(path);
 
+#if 0
   if (lstat(localpath, stbuf) < 0) {
     retv = -errno;
   }
+#else
+  while (lstat(localpath, stbuf) < 0) {
+    int eintr = EINTR;
+    if (errno != eintr) {
+      retv = -errno;
+      break;
+    }
+  }
+#endif
 
   /* cleanup */
   free(localpath);
@@ -498,7 +535,7 @@ int middfs_mirror_mount(const char *dir, const char *mirror) {
 }
 
 int main(int argc, char *argv[]) {
-  int retv = 0;
+  int retv = 1;
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   
   /* set middfs option defaults */
@@ -513,7 +550,6 @@ int main(int argc, char *argv[]) {
   if (middfs_opts.show_help) {
     if (fuse_opt_add_arg(&args, "--help") == 0) {
       show_help(argv[0]);
-      retv = 1;
       goto cleanup;
     }
     return 0;
@@ -524,10 +560,23 @@ int main(int argc, char *argv[]) {
   if (middfs_opts.root_dir == NULL) {
     fprintf(stderr, "%s: required: --root=<path>\n", argv[0]);
     opt_valid = 0;
+  } else {
+    /* convert to absolute path */
+    if ((errno = -middfs_abspath(&middfs_opts.root_dir)) > 0) {
+      perror("middfs_abspath");
+      goto cleanup;
+    }
   }
+  
   if (middfs_opts.mirror_dir == NULL) {
     fprintf(stderr, "%s: required: --mirror=<path>\n", argv[0]);
     opt_valid = 0;
+  } else {
+    /* convert to absolute path */
+    if ((errno = -middfs_abspath(&middfs_opts.mirror_dir)) > 0) {
+      perror("middfs_abspath");
+      goto cleanup;
+    }
   }
   
   if (!opt_valid) {
