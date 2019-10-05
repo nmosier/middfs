@@ -1,8 +1,14 @@
 middfs TODO
 
 TASKS
+
+DONE
 [X] Do not mount mirror by default.
 [X] Specify user directory name as command-line argument.
+
+
+TODO
+[ ] Rewrite file ops to use middfs_rsrc as file handle.
 [ ] Check if file is on local disk; if not, ping server for file.
 [ ] Write basic server that handles requests and returns a dummy
     file.

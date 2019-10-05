@@ -16,13 +16,19 @@ struct middfs_rsrc {
    */
   enum middfs_rsrc_type {MR_NETWORK, MR_LOCAL, MR_ROOT} mr_type;
 
-  /* owner: who owns this file, i.e. under which
+  /* mr_owner: who owns this file, i.e. under which
    * middfs subdirectory it appears */
   char *mr_owner;
 
-  /* path: path of this file, relative to owner folder
+  /* mr_path: path of this file, relative to owner folder
    * NOTE: should still start with leading '/'. */
   char *mr_path;
+
+  /* mr_fd: file descriptor (MR_LOCAL) or socket descriptor
+   * (MR_NETWORK). Not used for MR_ROOT. Should be initialized
+   * to -1.
+   */
+  int mr_fd;
 };
 
 char *middfs_localpath(const char *path);

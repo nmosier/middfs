@@ -75,27 +75,33 @@ int middfs_rsrc(const char *path, struct middfs_rsrc *rsrc) {
     /* requesting middfs root -- special type of request */
     rsrc->mr_owner = rsrc->mr_path = NULL;
     rsrc->mr_type = MR_ROOT;
-    return 0;
-  }
-
-  const char *owner_end = owner_begin + strcspn(owner_begin, "/");
-  
-  /* dup and save owner string */
-  rsrc->mr_owner = strndup(owner_begin, owner_end - owner_begin);
-  
-  /* find owner path string */
-  if (*owner_end == '\0') {
-    rsrc->mr_path = strdup("/");
   } else {
-    rsrc->mr_path = strdup(owner_end);
-  }
+    /* requesting something in a user directory */
+    
+    const char *owner_end = owner_begin + strcspn(owner_begin, "/");
+  
+    /* dup and save owner string */
+    rsrc->mr_owner = strndup(owner_begin, owner_end - owner_begin);
+  
+    /* find owner path string */
+    if (*owner_end == '\0') {
+      rsrc->mr_path = strdup("/");
+    } else {
+      rsrc->mr_path = strdup(owner_end);
+    }
 
-  /* find resource type */
-  if (strcmp(rsrc->mr_owner, middfs_conf.client_name) != 0) {
-    rsrc->mr_type = MR_NETWORK; /* resource not owned by client */
-  } else {
-    rsrc->mr_type = MR_LOCAL; /* resource owned by client */
+    /* find resource type */
+    if (strcmp(rsrc->mr_owner, middfs_conf.client_name) != 0) {
+      rsrc->mr_type = MR_NETWORK; /* resource not owned by client */
+    } else {
+      rsrc->mr_type = MR_LOCAL; /* resource owned by client */
+    }
+
   }
+  
+  /* initialize other fields */
+  rsrc->mr_fd = -1;
   
   return 0; /* success */
 }
+

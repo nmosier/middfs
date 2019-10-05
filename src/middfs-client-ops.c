@@ -46,19 +46,9 @@ static int middfs_getattr(const char *path, struct stat *stbuf,
   /* obtain actual path through mirror */
   char *localpath = middfs_localpath(path);
 
-#if 0
   if (lstat(localpath, stbuf) < 0) {
     retv = -errno;
   }
-#else
-  while (lstat(localpath, stbuf) < 0) {
-    int eintr = EINTR;
-    if (errno != eintr) {
-      retv = -errno;
-      break;
-    }
-  }
-#endif
 
   /* cleanup */
   free(localpath);
