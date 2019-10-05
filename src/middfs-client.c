@@ -20,11 +20,14 @@
 
 
 /* defaults */
+/* (NOT USED) */
+#if 0
 #define MIDDFS_CONF_DIR ".middfs-d"
 #define MIDDFS_CONF_MIRROR "mirror"
 #define MIDDFS_CONF_FILE "middfs.conf"
+#endif
 
-#define OPTION(t, p) {t, offsetof(struct middfs_opts, p), 1}
+#define OPTDEF(t, p) {t, offsetof(struct middfs_opts, p), 1}
 
 /* middfs options 
  * NOTE: Must be global because FUSE API doesn't know about this.
@@ -34,19 +37,27 @@ struct middfs_opts {
   int show_help;
   char *root_dir;
   char *mirror_dir;
+  char *client_dir;
+};
+
+struct middfs_conf {
+  char *local_dir; /* logical client dir -- can be mirror_dir or client_dir */
 };
 
 /* GLOBALS */
 
 static const struct fuse_opt option_spec[] =
-  {OPTION("--root=%s", root_dir),
-   OPTION("--mirror=%s", mirror_dir),
-   OPTION("--help", show_help),
+  {/* Required Parameters */
+   OPTDEF("--root=%s", root_dir),
+   OPTDEF("--mirror=%s", mirror_dir),
+   OPTDEF("--dir=%s", client_dir),
+   /* Optional Parameters */
+   OPTDEF("--help", show_help),   
    FUSE_OPT_END
   };
 
 static struct middfs_opts middfs_opts;
-// static struct middfs_config middfs_conf;
+static struct middfs_conf middfs_conf;
 
 /* utility function definitions */
 
@@ -59,7 +70,9 @@ static struct middfs_opts middfs_opts;
  */
 char *middfs_localpath(const char *middfs_path) {
   char *localpath;
-  asprintf(&localpath, "%s%s", middfs_opts.mirror_dir, middfs_path);
+  const char *fmt = (middfs_path[0] == '/') ? "%s%s" : "%s/%s";
+  
+  asprintf(&localpath, fmt, middfs_conf.local_dir, middfs_path);
   return localpath;
 }
 
@@ -204,19 +217,20 @@ static int middfs_readdir(const char *path, void *buf,
 }
 
 
-#if 0
 static int middfs_mknod(const char *path, mode_t mode, dev_t rdev) {
   int retv = 0;
   char *localpath = middfs_localpath(path);
-  
+
+#if 0
   if (mknod_wrapper(AT_FDCWD, localpath, NULL,mode, rdev) < 0) {
     retv = -errno;
   }
+#endif
 
   free(localpath);
   return retv;
 }
-#endif
+
 
 static int middfs_mkdir(const char *path, mode_t mode) {
   int retv = 0;
@@ -254,15 +268,15 @@ static int middfs_rmdir(const char *path) {
   return retv;
 }
 
-static int middfs_symlink(const char *from, const char *to) {
+static int middfs_symlink(const char *to, const char *from) {
   int retv = 0;
   char *local_to = middfs_localpath(to);
   char *local_from = middfs_localpath(from);
-
-  if (symlink(local_to, local_from) < 0) {
+  
+  if (symlink(to, local_from) < 0) {
     retv = -errno;
   }
-
+  
   free(local_to);
   free(local_from);
   return retv;
@@ -284,7 +298,7 @@ static int middfs_rename(const char *from, const char *to,
   if (rename(local_from, local_to) < 0) {
     retv = -errno;
   }
-
+  
   free(local_to);
   free(local_from);
   return retv;
@@ -485,9 +499,7 @@ static struct fuse_operations middfs_oper =
    .getattr = middfs_getattr,
    .access = middfs_access,
    .readlink = middfs_readlink,
-#if 0
    .mknod = middfs_mknod,
-#endif
    .mkdir = middfs_mkdir,
    .symlink = middfs_symlink,
    .unlink = middfs_unlink,
@@ -510,8 +522,9 @@ void show_help(const char *arg0) {
   fprintf(stderr,
 	  "usage: %s [option...] dir\n"					\
 	  "Options:\n"							\
-	  "  --root=<dir>    middfs user directory\n"			\
+	  "  --root=<dir>    middfs directory\n"			\
 	  "  --mirror=<dir>  directory to mount mirror of root dir\n"	\
+	  "  --dir=<dir>     client directory\n"			\
 	  "  --help          display this help dialog\n",
 	  arg0);
 }
@@ -553,9 +566,13 @@ int middfs_mirror_unmount(const char *mirror) {
 int main(int argc, char *argv[]) {
   int retv = 1;
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  int should_mirror, mounted_mirror;
+
+  should_mirror = mounted_mirror = 0;
   
   /* set middfs option defaults */
   middfs_defaultopts(&middfs_opts);
+  memset(&middfs_conf, sizeof(middfs_conf), 0);
   
   /* parse options */
   if (fuse_opt_parse(&args, &middfs_opts,
@@ -583,13 +600,24 @@ int main(int argc, char *argv[]) {
       goto cleanup;
     }
   }
-  
-  if (middfs_opts.mirror_dir == NULL) {
-    fprintf(stderr, "%s: required: --mirror=<path>\n", argv[0]);
+
+  /* NOTE: mirror dir not required. */
+  if (middfs_opts.mirror_dir != NULL) {
+    should_mirror = 1;
+    
+    /* convert to absolute path */
+    if ((errno = -middfs_abspath(&middfs_opts.mirror_dir)) > 0) {
+      perror("middfs_abspath");
+      goto cleanup;
+    }
+  }
+
+  if (middfs_opts.client_dir == NULL) {
+    fprintf(stderr, "%s: required: --dir=<path>\n", argv[0]);
     opt_valid = 0;
   } else {
     /* convert to absolute path */
-    if ((errno = -middfs_abspath(&middfs_opts.mirror_dir)) > 0) {
+    if ((errno = -middfs_abspath(&middfs_opts.client_dir)) > 0) {
       perror("middfs_abspath");
       goto cleanup;
     }
@@ -599,18 +627,30 @@ int main(int argc, char *argv[]) {
     goto cleanup;
   }
 
-  /* set up mirror before FUSE mounts */
-  if (middfs_mirror_mount(middfs_opts.root_dir,
-			  middfs_opts.mirror_dir) < 0) {
-    goto cleanup;
+  /* set local user directory access path */
+  if (should_mirror) {
+    middfs_conf.local_dir = middfs_opts.mirror_dir;
+  } else {
+    middfs_conf.local_dir = middfs_opts.client_dir;
   }
-
+  
+  /* set up mirror before FUSE mounts */
+  if (should_mirror) {
+    if (middfs_mirror_mount(middfs_opts.client_dir,
+			    middfs_opts.mirror_dir) < 0) {
+      goto cleanup;
+    }
+    mounted_mirror = 1;
+  }
+  
   umask(S_IWGRP|S_IWOTH);
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
-  if (middfs_mirror_unmount(middfs_opts.mirror_dir) < 0) {
-    retv = -1;
+  if (mounted_mirror) {
+    if (middfs_mirror_unmount(middfs_opts.mirror_dir) < 0) {
+      retv = -1;
+    }
   }
   fuse_opt_free_args(&args);
   return retv;
