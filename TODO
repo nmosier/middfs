@@ -1,8 +1,8 @@
 middfs TODO
 
 TASKS
-[ ] Do not mount mirror by default.
-[ ] Specify user directory name as command-line argument.
+[X] Do not mount mirror by default.
+[X] Specify user directory name as command-line argument.
 [ ] Check if file is on local disk; if not, ping server for file.
 [ ] Write basic server that handles requests and returns a dummy
     file.

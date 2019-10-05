@@ -1,8 +1,9 @@
-SRCS = middfs-client.c
+SRCS = middfs-client.c middfs-client-ops.c middfs-client-util.c
+HDRS = middfs-client.h middfs-client-ops.h middfs-client-util.h
 OBJS = $(SRCS:.c=.o)
 BIN = middfs-client
 
-CFLAGS = -c `pkg-config fuse3 --cflags` -g
+CFLAGS = -c `pkg-config fuse3 --cflags` -g -Wall -pedantic
 LDLIBS = `pkg-config fuse3 --libs`
 
 # Default Mount Parameters
@@ -14,10 +15,11 @@ CLIENT_DIR=home
 $(BIN): $(OBJS)
 	$(CC) $(LDLIBS) -o $@ $^
 
-%.o: %.c
+%.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -o $@ $<
 
 .PHONY: clean
+clean:
 	rm -f $(OBJS) $(BIN)
 
 .PHONY: mount
