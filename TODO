@@ -1,8 +1,15 @@
 middfs TODO
 
-GOALS
-[ ] write basic client middfs that mirrors directory hardlinked to
-    ~/.middfs-d/<username>
-[ ] client middfs also creates ~/.middfs-d/<username> on startup
-    if necessary
+TASKS
+[ ] Do not mount mirror by default.
+[ ] Specify user directory name as command-line argument.
+[ ] Check if file is on local disk; if not, ping server for file.
+[ ] Write basic server that handles requests and returns a dummy
+    file.
+[ ] Design a basic packet format for client<->server communication.
+[ ] Maintain configuration directory in ~/.middfs-d and config
+    file in ~/.middfs-d/middfs.conf.
+[ ] Use mount(2)/umount(2) system calls instead of calling system(3).
 
+client dir (static, local) vs. client name (determined by server
+upon connecting)
