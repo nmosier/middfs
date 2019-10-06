@@ -30,6 +30,13 @@ char *middfs_localpath(const char *middfs_path) {
   return localpath;
 }
 
+char *middfs_localpath_tmp(const char *middfs_path) {
+  char *localpath;
+  asprintf(&localpath, "%s/%s%s", middfs_conf.local_dir,
+	   middfs_conf.client_name, middfs_path);
+  return localpath;
+}
+
 /* middfs_abspath() -- convert a relative path into an absolute path
  * ARGS:
  *  - path: a pointer to a dynamically allocated string
@@ -105,3 +112,19 @@ int middfs_rsrc(const char *path, struct middfs_rsrc *rsrc) {
   return 0; /* success */
 }
 
+int middfs_rsrc_delete(struct middfs_rsrc *rsrc) {
+  int retv = 0;
+
+  if (rsrc != NULL) {
+    if (rsrc->mr_fd >= 0) {
+      if (close(rsrc->mr_fd) < 0) {
+	retv = -errno;
+      }
+    }
+    
+    free(rsrc->mr_owner);
+    free(rsrc->mr_path);
+  }
+  
+  return retv;
+}

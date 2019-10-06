@@ -32,8 +32,10 @@ struct middfs_rsrc {
 };
 
 char *middfs_localpath(const char *path);
+char *middfs_localpath_tmp(const char *middfs_path);
 int middfs_abspath(char **path);
 
 int middfs_rsrc(const char *path, struct middfs_rsrc *rsrc);
+int middfs_rsrc_delete(struct middfs_rsrc *rsrc);
 
 #endif
