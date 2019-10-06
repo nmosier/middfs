@@ -9,6 +9,7 @@ LDLIBS = `pkg-config fuse3 --libs`
 # Default Mount Parameters
 ROOT_DIR=tst
 CLIENT_DIR=home
+CLIENT_NAME=client
 
 # TODO -- C header file dependencies
 
@@ -24,7 +25,7 @@ clean:
 
 .PHONY: mount
 mount: $(BIN)
-	sudo ./$(BIN) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" "$(ROOT_DIR)"
+	sudo ./$(BIN) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
 
 .PHONY: umount
 umount:
