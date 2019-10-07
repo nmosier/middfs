@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "middfs-client-util.h"
 #include "middfs-client.h"
@@ -66,11 +67,11 @@ int middfs_abspath(char **path) {
 }
 
 
-/* middfs_rsrc() -- construct resource from path
+/* middfs_rsrc_create() -- construct resource from path
  * ARGS:
  * RETV: returns 0 on success; -errno on error.
  */
-int middfs_rsrc(const char *path, struct middfs_rsrc *rsrc) {
+int middfs_rsrc_create(const char *path, struct middfs_rsrc *rsrc) {
   /* find owner string in _path_ */
   const char *owner_begin = path + strspn(path, "/");
 
@@ -126,5 +127,52 @@ int middfs_rsrc_delete(struct middfs_rsrc *rsrc) {
     free(rsrc->mr_path);
   }
   
+  return retv;
+}
+
+int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
+  va_list args; /* only needed if (flags & O_CREAT) -- will contain
+		 * _mode_ param (for more info man open(2))*/
+  int retv = 0;
+  int fd = -1;
+  int mode = 0; /* NOTE: This might need to be init'ed to umask(2)? */
+  char *localpath = NULL;
+
+  /* check for file create flag; obtain mode param if present */
+  if ((flags & O_CREAT)) {
+    va_start(args, flags);
+    mode = va_arg(args, int);
+    va_end(args);
+  }
+  
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    retv = -EOPNOTSUPP;
+    goto cleanup;
+    
+  case MR_LOCAL:
+    /* open local file */
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if ((fd = open(localpath, flags, mode)) < 0) {
+      retv = -errno;
+      goto cleanup;
+    }
+    break;
+    
+  default:
+    abort();
+  }
+
+  rsrc->mr_fd = fd;
+  
+ cleanup:
+  if (retv < 0) {
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+  free(localpath);
+
   return retv;
 }
