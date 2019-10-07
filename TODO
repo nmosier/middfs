@@ -8,6 +8,7 @@ DONE
 [X] Rewrite file ops to use middfs_rsrc as file handle.
 
 TODO
+[ ] Automated tests
 [ ] Write middfs_rsrc_open() function for opening resource
     (would involve opening a file descriptor (local) and socket
     (network))

@@ -42,22 +42,76 @@ static void *middfs_init(struct fuse_conn_info *conn,
 static int middfs_getattr(const char *path, struct stat *stbuf,
 			  struct fuse_file_info *fi) {
   int retv = 0;
-
-  /* obtain actual path through mirror */
-  char *localpath = middfs_localpath(path);
-
-  if (lstat(localpath, stbuf) < 0) {
-    retv = -errno;
+  struct middfs_rsrc *rsrc = NULL;
+  struct middfs_rsrc rsrc_tmp;
+    
+  if (fi == NULL) {
+    /* create & open temporary resource */
+    if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+      goto cleanup;
+    }
+    if ((retv = middfs_rsrc_open(&rsrc_tmp,
+				 O_RDONLY|O_NOFOLLOW)) < 0) {
+      goto cleanup;
+    }
+    rsrc = &rsrc_tmp;
+  } else {
+    rsrc = (struct middfs_rsrc *) fi->fh;
   }
 
-  /* cleanup */
-  free(localpath);
+  if (fstat(rsrc->mr_fd, stbuf) < 0) {
+    retv = -errno;
+    goto cleanup;
+  }
+
+ cleanup:
+  /* delete temporary resource if needed */
+  if (fi == NULL) {
+    int res = middfs_rsrc_delete(&rsrc_tmp);
+    retv = (retv < 0) ? retv : res; /* correctly set return val */
+  }
+  
   return retv;
 }
 
 static int middfs_access(const char *path, int mode) {
   int retv = 0;
+  int res;
+  char *localpath = NULL;
 
+#if 1
+  struct middfs_rsrc rsrc_tmp;
+
+  /* create temporary resource */
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
+  }
+
+  switch (rsrc_tmp.mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    retv = -EOPNOTSUPP;
+    goto cleanup;
+
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc_tmp.mr_path);
+    if (access(localpath, mode) < 0) {
+      retv = -errno;
+      goto cleanup;
+    }
+    break;
+
+  default:
+    abort();
+  }
+
+ cleanup:
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv = (retv < 0) ? retv : res;
+  free(localpath);
+  return retv;
+  
+#else
   char *localpath = middfs_localpath(path);
   
   if (access(localpath, mode) < 0) {
@@ -67,6 +121,7 @@ static int middfs_access(const char *path, int mode) {
   /* cleanup */
   free(localpath);
   return retv;
+#endif
 }
 
 static int middfs_readlink(const char *path, char *buf,
@@ -260,8 +315,6 @@ static int middfs_truncate(const char *path, off_t size,
   int retv = 0;
   struct middfs_rsrc *rsrc = NULL;
 
-#if 1
-
   if (fi == NULL) {
     if ((rsrc = malloc(sizeof(*rsrc))) == NULL) {
       retv = -errno;
@@ -305,21 +358,6 @@ static int middfs_truncate(const char *path, off_t size,
   }
 
   return retv;
-  
-#else
-  /* if file info has a file descriptor, use that;
-   * otherwise, truncate file using path */
-  if (fi != NULL) {
-    retv = ftruncate(fi->fh, size);
-  } else {
-    char *local_path = middfs_localpath(path);
-    retv = truncate(local_path, size);
-    free(local_path);
-  }
-
-  return retv < 0 ? -errno : 0;
-
-#endif
 }
 
 static int middfs_create(const char *path, mode_t mode,

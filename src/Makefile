@@ -25,7 +25,7 @@ clean:
 
 .PHONY: mount
 mount: $(BIN)
-	sudo ./$(BIN) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
+	./$(BIN) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
 
 .PHONY: umount
 umount:

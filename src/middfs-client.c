@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
     mounted_mirror = 1;
   }
   
-  umask(S_IWGRP|S_IWOTH);
+  umask(S_IRGRP|S_IROTH|S_IWGRP|S_IWOTH);
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
