@@ -29,8 +29,12 @@ mount: $(BIN)
 
 .PHONY: umount
 umount:
-	sudo umount "$(ROOT_DIR)"
+	umount "$(ROOT_DIR)"
 
 .PHONY: attach
 attach:
-	sudo gdb $(BIN) `pgrep middfs`
+	gdb $(BIN) `pgrep middfs`
+
+.PHONY: kill
+kill:
+	kill -TERM `pgrep middfs`

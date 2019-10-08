@@ -50,17 +50,13 @@ static int middfs_getattr(const char *path, struct stat *stbuf,
     if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
       goto cleanup;
     }
-    if ((retv = middfs_rsrc_open(&rsrc_tmp,
-				 O_RDONLY|O_NOFOLLOW)) < 0) {
-      goto cleanup;
-    }
     rsrc = &rsrc_tmp;
   } else {
     rsrc = (struct middfs_rsrc *) fi->fh;
   }
 
-  if (fstat(rsrc->mr_fd, stbuf) < 0) {
-    retv = -errno;
+  /* get lstat info */
+  if ((retv = middfs_rsrc_lstat(rsrc, stbuf)) < 0) {
     goto cleanup;
   }
 
@@ -78,8 +74,6 @@ static int middfs_access(const char *path, int mode) {
   int retv = 0;
   int res;
   char *localpath = NULL;
-
-#if 1
   struct middfs_rsrc rsrc_tmp;
 
   /* create temporary resource */
@@ -110,26 +104,36 @@ static int middfs_access(const char *path, int mode) {
   retv = (retv < 0) ? retv : res;
   free(localpath);
   return retv;
-  
-#else
-  char *localpath = middfs_localpath(path);
-  
-  if (access(localpath, mode) < 0) {
-    retv = -errno;
-  }
-
-  /* cleanup */
-  free(localpath);
-  return retv;
-#endif
 }
 
 static int middfs_readlink(const char *path, char *buf,
 			   size_t size) {
   ssize_t bytes;
   int retv = 0;
+  int res;
   char *localpath = middfs_localpath(path);
 
+#if 1
+  struct middfs_rsrc rsrc_tmp;
+  
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    goto cleanup;
+  }
+
+  if ((bytes = readlink(path, buf, size - 1)) < 0) {
+    retv = -errno;
+    goto cleanup;
+  }
+  
+  buf[bytes] = '\0';
+  
+ cleanup:
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv = (retv < 0) ? retv : res;
+  free(localpath);
+  return retv;
+  
+#else
   if ((bytes = readlink(path, buf, size - 1)) < 0) {
     retv = -errno;
   } else {
@@ -139,6 +143,7 @@ static int middfs_readlink(const char *path, char *buf,
   /* cleanup */
   free(localpath);
   return retv;
+#endif
 }
 
 static int middfs_readdir(const char *path, void *buf,
@@ -298,7 +303,7 @@ static int middfs_chmod(const char *path, mode_t mode,
 static int middfs_chown(const char *path, uid_t uid, gid_t gid,
 			struct fuse_file_info *fi) {
   int retv = 0;
-  char *localpath;
+  char *localpath = NULL;
 
   localpath = middfs_localpath(path);
 

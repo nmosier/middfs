@@ -176,3 +176,31 @@ int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
 
   return retv;
 }
+
+int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
+		      struct stat *sb) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    retv = -EOPNOTSUPP;
+    goto cleanup;
+    
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if (lstat(localpath, sb) < 0) {
+      retv = -errno;
+      goto cleanup;
+    }
+    break;
+
+  default:
+    abort();
+  }
+
+ cleanup:
+  free(localpath);
+  return retv;
+}

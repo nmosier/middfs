@@ -7,6 +7,7 @@
 #ifndef __MIDDFS_CLIENT_UTIL_H
 #define __MIDDFS_CLIENT_UTIL_H
 
+#include <sys/stat.h>
 
 struct middfs_rsrc {
   /* mr_type: type of resource (local or network)
@@ -38,5 +39,7 @@ int middfs_abspath(char **path);
 int middfs_rsrc_create(const char *path, struct middfs_rsrc *rsrc);
 int middfs_rsrc_delete(struct middfs_rsrc *rsrc);
 int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...);
+int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
+		      struct stat *sb);
 
 #endif
