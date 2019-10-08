@@ -48,7 +48,7 @@ static int middfs_getattr(const char *path, struct stat *stbuf,
   if (fi == NULL) {
     /* create & open temporary resource */
     if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
-      goto cleanup;
+      return retv;
     }
     rsrc = &rsrc_tmp;
   } else {
@@ -81,6 +81,12 @@ static int middfs_access(const char *path, int mode) {
     return retv;
   }
 
+#if 1
+  if ((retv = middfs_rsrc_access(&rsrc_tmp, mode)) < 0) {
+    goto cleanup;
+  }
+#else
+  
   switch (rsrc_tmp.mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
@@ -99,6 +105,8 @@ static int middfs_access(const char *path, int mode) {
     abort();
   }
 
+#endif
+  
  cleanup:
   res = middfs_rsrc_delete(&rsrc_tmp);
   retv = (retv < 0) ? retv : res;
@@ -108,42 +116,25 @@ static int middfs_access(const char *path, int mode) {
 
 static int middfs_readlink(const char *path, char *buf,
 			   size_t size) {
-  ssize_t bytes;
   int retv = 0;
   int res;
   char *localpath = middfs_localpath(path);
-
-#if 1
   struct middfs_rsrc rsrc_tmp;
   
   if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
+  }
+  if ((retv = middfs_rsrc_readlink(&rsrc_tmp, buf, size)) < 0) {
     goto cleanup;
   }
 
-  if ((bytes = readlink(path, buf, size - 1)) < 0) {
-    retv = -errno;
-    goto cleanup;
-  }
-  
-  buf[bytes] = '\0';
+  buf[retv] = '\0';
   
  cleanup:
   res = middfs_rsrc_delete(&rsrc_tmp);
   retv = (retv < 0) ? retv : res;
   free(localpath);
   return retv;
-  
-#else
-  if ((bytes = readlink(path, buf, size - 1)) < 0) {
-    retv = -errno;
-  } else {
-    buf[bytes] = '\0';
-  }
-
-  /* cleanup */
-  free(localpath);
-  return retv;
-#endif
 }
 
 static int middfs_readdir(const char *path, void *buf,
@@ -372,57 +363,48 @@ static int middfs_create(const char *path, mode_t mode,
 
   /* create resource */
   if ((rsrc = malloc(sizeof(*rsrc))) == NULL) {
-    retv = -errno;
-    goto cleanup;
+    return -errno;
   }
   if ((retv = middfs_rsrc_create(path, rsrc)) < 0) {
-    goto cleanup;
+    free(rsrc);
+    return retv;
   }
 
   /* open resource */
   if ((retv = middfs_rsrc_open(rsrc, fi->flags, mode)) < 0) {
-    goto cleanup;
+    middfs_rsrc_delete(rsrc);
+    free(rsrc);
+    return retv;
   }
 
   /* update file handle with resource */
   fi->fh = (uint64_t) rsrc;
-  
- cleanup:
-  if (retv < 0) {
-    middfs_rsrc_delete(rsrc);
-  }
   return retv;
 }
 
 static int middfs_open(const char *path, struct fuse_file_info *fi) {
   int retv = 0;
-  char *localpath = NULL;
 
   /* create new resource */
   struct middfs_rsrc *rsrc;
   if ((rsrc = malloc(sizeof(*rsrc))) == NULL) {
-    retv = -errno;
-    goto cleanup;
+    return -errno;
   }
   if ((retv = middfs_rsrc_create(path, rsrc)) < 0) {
-    goto cleanup;
+    free(rsrc);
+    return retv;
   }
 
   /* open resource */
   if ((retv = middfs_rsrc_open(rsrc, fi->flags)) < 0) {
-    goto cleanup;
+    middfs_rsrc_delete(rsrc);
+    free(rsrc);
+    return retv;
   }
 
   /* update file handle with resource */
   fi->fh = (uint64_t) rsrc;
-  
- cleanup:
-  if (retv < 0) {
-    middfs_rsrc_delete(rsrc);
-    free(rsrc);
-  }
-  free(localpath);  
-  return retv;
+  return 0;
 }
 
 static int middfs_read(const char *path, char *buf, size_t size,
@@ -434,7 +416,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
   if (fi == NULL) {
     /* create & open temporary resource */
     if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
-      goto cleanup;
+      return retv;
     }
     if ((retv = middfs_rsrc_open(&rsrc_tmp, O_RDONLY)) < 0) {
       goto cleanup;
@@ -453,7 +435,8 @@ static int middfs_read(const char *path, char *buf, size_t size,
  cleanup:
   /* delete temporary resource if needed */
   if (fi == NULL) {
-    middfs_rsrc_delete(rsrc);
+    int res = middfs_rsrc_delete(rsrc);
+    retv = (retv < 0) ? retv : res;
   }
 
   return retv;
@@ -463,52 +446,30 @@ static int middfs_write(const char *path, const char *buf,
 			size_t size, off_t offset,
 			struct fuse_file_info *fi) {
   int retv = 0;
-  char *localpath = NULL;
   struct middfs_rsrc *rsrc = NULL;
+  struct middfs_rsrc rsrc_tmp;
   
   /* obtain resource */
   if (fi == NULL) {
-    if ((rsrc = malloc(sizeof(*rsrc))) == NULL) {
-      retv = -errno;
-      goto cleanup;
+    if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+      return retv;
     }
-    if ((retv = middfs_rsrc_create(path, rsrc)) < 0) {
+    if ((retv = middfs_rsrc_open(&rsrc_tmp, O_WRONLY)) < 0) {
       goto cleanup;
     }
   } else {
     rsrc = (struct middfs_rsrc *) fi->fh;
   }
 
-  switch (rsrc->mr_type) {
-  case MR_NETWORK:
-  case MR_ROOT:
-    retv = -EOPNOTSUPP;
+  if ((retv = pwrite(rsrc->mr_fd, buf, size, offset)) < 0) {
+    retv = -errno;
     goto cleanup;
-    
-  case MR_LOCAL:
-    localpath = middfs_localpath(path);
-    if (rsrc->mr_fd < 0) {
-      if ((rsrc->mr_fd = open(localpath, O_WRONLY)) < 0) {
-	retv = -errno;
-	goto cleanup;
-      }
-    }
-    if ((retv = pwrite(rsrc->mr_fd, buf, size, offset)) < 0) {
-      retv = -errno;
-      goto cleanup;
-    }
-    break;
-    
-  default:
-    abort();
   }
-  
+
  cleanup:
   if (fi == NULL) {
     middfs_rsrc_delete(rsrc);
-    free(rsrc);
   }
-  free(localpath);
 
   return retv;
 }

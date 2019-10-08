@@ -41,5 +41,8 @@ int middfs_rsrc_delete(struct middfs_rsrc *rsrc);
 int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...);
 int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
 		      struct stat *sb);
+int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
+			 char *buf, size_t bufsize);
+
 
 #endif

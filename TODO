@@ -12,6 +12,7 @@ TODO
 [ ] Write middfs_rsrc_open() function for opening resource
     (would involve opening a file descriptor (local) and socket
     (network))
+[ ] Remove chown file op -- requires root access so useless for middfs.
 [ ] Check if file is on local disk; if not, ping server for file.
 [ ] Write basic server that handles requests and returns a dummy
     file.
