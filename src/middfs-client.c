@@ -19,7 +19,7 @@
 
 #include "middfs-client.h"
 #include "middfs-client-ops.h"
-#include "middfs-client-util.h"
+#include "middfs-client-rsrc.h"
 
 #define OPTDEF(t, p) {t, offsetof(struct middfs_opts, p), 1}
 

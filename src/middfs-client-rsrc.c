@@ -1,4 +1,4 @@
-/* middfs-client-util.c -- implementation of utility functions for
+/* middfs-client-rsrc.c -- implementation of utility functions for
  * middfs-client
  * Tommaso Monaco & Nicholas Mosier
  * Oct 2019
@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-#include "middfs-client-util.h"
+#include "middfs-client-rsrc.h"
 #include "middfs-client.h"
 
 /* utility function definitions */

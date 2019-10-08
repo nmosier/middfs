@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 
 #include "middfs-client-ops.h"
-#include "middfs-client-util.h"
+#include "middfs-client-rsrc.h"
 
 /* file I/O function definitions */
 
@@ -81,32 +81,10 @@ static int middfs_access(const char *path, int mode) {
     return retv;
   }
 
-#if 1
   if ((retv = middfs_rsrc_access(&rsrc_tmp, mode)) < 0) {
     goto cleanup;
   }
-#else
-  
-  switch (rsrc_tmp.mr_type) {
-  case MR_NETWORK:
-  case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
 
-  case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc_tmp.mr_path);
-    if (access(localpath, mode) < 0) {
-      retv = -errno;
-      goto cleanup;
-    }
-    break;
-
-  default:
-    abort();
-  }
-
-#endif
-  
  cleanup:
   res = middfs_rsrc_delete(&rsrc_tmp);
   retv = (retv < 0) ? retv : res;
@@ -118,7 +96,6 @@ static int middfs_readlink(const char *path, char *buf,
 			   size_t size) {
   int retv = 0;
   int res;
-  char *localpath = middfs_localpath(path);
   struct middfs_rsrc rsrc_tmp;
   
   if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
@@ -133,7 +110,6 @@ static int middfs_readlink(const char *path, char *buf,
  cleanup:
   res = middfs_rsrc_delete(&rsrc_tmp);
   retv = (retv < 0) ? retv : res;
-  free(localpath);
   return retv;
 }
 
@@ -141,18 +117,38 @@ static int middfs_readdir(const char *path, void *buf,
 			  fuse_fill_dir_t filler, off_t offset,
 			  struct fuse_file_info *fi,
 			  enum fuse_readdir_flags flags) {
-  DIR *dir;
+  DIR *dir = NULL;
   struct dirent *dir_entry;
-  char *localpath;
+#if 0  
+  char *localpath = NULL;
+#endif  
   int retv = 0;
+  struct middfs_rsrc rsrc_tmp;
+
+#if 1
+  /* get resource handle */
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
+  }
+  if ((retv = middfs_rsrc_open(&rsrc_tmp, O_RDONLY)) < 0) {
+    goto cleanup;
+  }
   
+  /* open directory */
+  if ((dir = fdopendir(rsrc_tmp.mr_fd)) == NULL) {
+    retv = -errno;
+    goto cleanup;
+  }
+  
+#else
   localpath = middfs_localpath(path);
   
   if ((dir = opendir(localpath)) == NULL) {
     retv = -errno;
     goto cleanup;
   }
-
+#endif
+  
   while ((dir_entry = readdir(dir)) != NULL) {
     struct stat st;
     memset(&st, sizeof(st), 0);
@@ -164,11 +160,21 @@ static int middfs_readdir(const char *path, void *buf,
   }
 
  cleanup:
+#if 1
+  if (dir != NULL) {
+    if (closedir(dir) < 0) {
+      if (retv >= 0) {
+	retv = -errno;
+      }
+    }
+  }
+#else
   if (dir != NULL && closedir(dir) < 0 && retv != 0) {
       retv = -errno;
   }
   free(localpath);
-
+#endif
+  
   return retv;
 }
 

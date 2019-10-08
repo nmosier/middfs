@@ -1,5 +1,5 @@
-SRCS = middfs-client.c middfs-client-ops.c middfs-client-util.c
-HDRS = middfs-client.h middfs-client-ops.h middfs-client-util.h
+SRCS = middfs-client.c middfs-client-ops.c middfs-client-rsrc.c
+HDRS = middfs-client.h middfs-client-ops.h middfs-client-rsrc.h
 OBJS = $(SRCS:.c=.o)
 BIN = middfs-client
 

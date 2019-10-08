@@ -1,4 +1,4 @@
-/* middfs-client-util.h -- interface for utility functions for
+/* middfs-client-rsrc.h -- interface for utility functions for
  * middfs-client
  * Tommaso Monaco & Nicholas Mosier
  * Oct 2019
@@ -43,6 +43,6 @@ int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
 		      struct stat *sb);
 int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
 			 char *buf, size_t bufsize);
-
+int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode);
 
 #endif
