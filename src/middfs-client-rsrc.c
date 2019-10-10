@@ -260,3 +260,54 @@ int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode) {
   free(localpath);
   return retv;
 }
+
+int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    retv = -EOPNOTSUPP;
+    goto cleanup;
+
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if (mkdir(localpath, mode) < 0) {
+      retv = -errno;
+    }
+    break;
+
+  default:
+    abort();
+  }
+  
+ cleanup:
+  free(localpath);
+
+  return retv;
+}
+
+int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    return -EOPNOTSUPP;
+    
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if (unlink(localpath) < 0) {
+      retv = -errno;
+    }
+    free(localpath);
+    break;
+    
+  default:
+    abort();
+  }
+
+  return retv;
+}

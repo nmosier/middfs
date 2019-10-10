@@ -44,5 +44,9 @@ int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
 int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
 			 char *buf, size_t bufsize);
 int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode);
+int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode);
+int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc);
+
+
 
 #endif

@@ -6,3 +6,10 @@ FUSE
 
 
 
+
+File I/O Functions with Compatible Prototypes:
+(rsrc, mode) open, access, mkdir
+(rsrc, statbuf) lstat,
+(rsrc, buf, size) readlink
+(rsrc) unlink
+

@@ -119,13 +119,9 @@ static int middfs_readdir(const char *path, void *buf,
 			  enum fuse_readdir_flags flags) {
   DIR *dir = NULL;
   struct dirent *dir_entry;
-#if 0  
-  char *localpath = NULL;
-#endif  
   int retv = 0;
   struct middfs_rsrc rsrc_tmp;
 
-#if 1
   /* get resource handle */
   if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
     return retv;
@@ -140,15 +136,6 @@ static int middfs_readdir(const char *path, void *buf,
     goto cleanup;
   }
   
-#else
-  localpath = middfs_localpath(path);
-  
-  if ((dir = opendir(localpath)) == NULL) {
-    retv = -errno;
-    goto cleanup;
-  }
-#endif
-  
   while ((dir_entry = readdir(dir)) != NULL) {
     struct stat st;
     memset(&st, sizeof(st), 0);
@@ -160,7 +147,6 @@ static int middfs_readdir(const char *path, void *buf,
   }
 
  cleanup:
-#if 1
   if (dir != NULL) {
     if (closedir(dir) < 0) {
       if (retv >= 0) {
@@ -168,53 +154,59 @@ static int middfs_readdir(const char *path, void *buf,
       }
     }
   }
-#else
-  if (dir != NULL && closedir(dir) < 0 && retv != 0) {
-      retv = -errno;
-  }
-  free(localpath);
-#endif
   
   return retv;
 }
 
 
+#if 0
 static int middfs_mknod(const char *path, mode_t mode, dev_t rdev) {
   int retv = 0;
-  char *localpath = middfs_localpath(path);
 
-#if 0
   if (mknod_wrapper(AT_FDCWD, localpath, NULL,mode, rdev) < 0) {
     retv = -errno;
   }
-#endif
 
-  free(localpath);
   return retv;
 }
+#endif
 
 
 static int middfs_mkdir(const char *path, mode_t mode) {
   int retv = 0;
-  char *localpath = middfs_localpath(path);
+  int res;
+  struct middfs_rsrc rsrc_tmp;
 
-  if (mkdir(localpath, mode) < 0) {
-    retv = -errno;
-  }
   
-  free(localpath);
+  /* acquire temporary resource */
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
+  }
+
+  /* mkdir for resource */
+  retv = middfs_rsrc_mkdir(&rsrc_tmp, mode);
+
+  /* cleanup */
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv = (retv < 0) ? retv : res;
+  
   return retv;
 }
 
 static int middfs_unlink(const char *path) {
   int retv = 0;
-  char *localpath = middfs_localpath(path);
-
-  if (unlink(localpath) < 0) {
-    retv = -errno;
+  int res;
+  struct middfs_rsrc rsrc_tmp;
+  
+  /* acquire temporary resource */
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
   }
+  retv = middfs_rsrc_unlink(&rsrc_tmp);
 
-  free(localpath);
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv = (retv < 0) ? retv : res;
+  
   return retv;
 }
 
@@ -511,7 +503,9 @@ struct fuse_operations middfs_oper =
    .getattr = middfs_getattr,
    .access = middfs_access,
    .readlink = middfs_readlink,
+#if 0   
    .mknod = middfs_mknod,
+#endif
    .mkdir = middfs_mkdir,
    .symlink = middfs_symlink,
    .unlink = middfs_unlink,
