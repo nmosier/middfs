@@ -1,0 +1,3 @@
+[submodule "project"]
+	path = webserv
+	url = ssh://nmosier@basin/home/nmosier/kxmCTGzF/project
