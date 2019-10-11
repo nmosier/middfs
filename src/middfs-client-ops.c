@@ -73,7 +73,6 @@ static int middfs_getattr(const char *path, struct stat *stbuf,
 static int middfs_access(const char *path, int mode) {
   int retv = 0;
   int res;
-  char *localpath = NULL;
   struct middfs_rsrc rsrc_tmp;
 
   /* create temporary resource */
@@ -81,14 +80,13 @@ static int middfs_access(const char *path, int mode) {
     return retv;
   }
 
-  if ((retv = middfs_rsrc_access(&rsrc_tmp, mode)) < 0) {
-    goto cleanup;
-  }
+  /* check access */
+  retv = middfs_rsrc_access(&rsrc_tmp, mode);
 
- cleanup:
+  /* cleanup */
   res = middfs_rsrc_delete(&rsrc_tmp);
   retv = (retv < 0) ? retv : res;
-  free(localpath);
+
   return retv;
 }
 
@@ -120,6 +118,7 @@ static int middfs_readdir(const char *path, void *buf,
   DIR *dir = NULL;
   struct dirent *dir_entry;
   int retv = 0;
+  int res;
   struct middfs_rsrc rsrc_tmp;
 
   /* get resource handle */
@@ -146,14 +145,17 @@ static int middfs_readdir(const char *path, void *buf,
     }
   }
 
+  if (fdclosedir(dir) < 0) {
+    retv = -errno;
+  }
+
  cleanup:
-  if (dir != NULL) {
-    if (closedir(dir) < 0) {
-      if (retv >= 0) {
-	retv = -errno;
-      }
+  if ((res = middfs_rsrc_delete(&rsrc_tmp)) < 0) {
+    if (retv >= 0) {
+      retv = res;
     }
   }
+
   
   return retv;
 }
@@ -212,50 +214,64 @@ static int middfs_unlink(const char *path) {
 
 static int middfs_rmdir(const char *path) {
   int retv = 0;
-  char *localpath = middfs_localpath(path);
-
-  if (rmdir(localpath) < 0) {
-    retv = -errno;
+  int res;
+  struct middfs_rsrc rsrc_tmp;
+  
+  if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+    return retv;
   }
+  retv = middfs_rsrc_rmdir(&rsrc_tmp);
 
-  free(localpath);
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv = (retv < 0) ? retv : res;
+  
   return retv;
 }
 
 static int middfs_symlink(const char *to, const char *from) {
   int retv = 0;
-  char *local_to = middfs_localpath(to);
-  char *local_from = middfs_localpath(from);
-  
-  if (symlink(to, local_from) < 0) {
-    retv = -errno;
+  int res;
+  struct middfs_rsrc rsrc_tmp;
+
+  if ((retv = middfs_rsrc_create(from, &rsrc_tmp)) < 0) {
+    return retv;
   }
-  
-  free(local_to);
-  free(local_from);
+
+  retv = middfs_rsrc_symlink(&rsrc_tmp, to);
+
+  res = middfs_rsrc_delete(&rsrc_tmp);
+  retv < 0 || (retv = res);
+
   return retv;
 }
 
 static int middfs_rename(const char *from, const char *to,
 			 unsigned int flags) {
   int retv = 0;
-  char *local_to, *local_from;
+  struct middfs_rsrc rsrc_from, rsrc_to;
 
   /* no flags are currently supported */
   if (flags) {
     return -EINVAL;
   }
-  
-  local_to = middfs_localpath(to);
-  local_from = middfs_localpath(from);
 
-  if (rename(local_from, local_to) < 0) {
-    retv = -errno;
+  /* create resources */
+  if ((retv = middfs_rsrc_create(from, &rsrc_from)) < 0) {
+    return retv;
   }
-  
-  free(local_to);
-  free(local_from);
+  if ((retv = middfs_rsrc_create(to, &rsrc_to)) < 0) {
+    goto cleanup;
+  }
+
+  /* rename */
+  retv = middfs_rsrc_rename(&rsrc_from, &rsrc_to);
+
+ cleanup:
+  middfs_rsrc_delete(&rsrc_from);
+  middfs_rsrc_delete(&rsrc_to); // TODO: error checking.
+
   return retv;
+  
 }
 
 static int middfs_link(const char *from, const char *to) {
@@ -308,44 +324,21 @@ static int middfs_truncate(const char *path, off_t size,
 			   struct fuse_file_info *fi) {
   int retv = 0;
   struct middfs_rsrc *rsrc = NULL;
+  struct middfs_rsrc rsrc_tmp;
 
   if (fi == NULL) {
-    if ((rsrc = malloc(sizeof(*rsrc))) == NULL) {
-      retv = -errno;
-      goto cleanup;
+    if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+      return retv;
     }
+    rsrc = &rsrc_tmp;
   } else {
     rsrc = (struct middfs_rsrc *) fi->fh;
   }
 
-  switch (rsrc->mr_type) {
-  case MR_NETWORK:
-  case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
-    
-  case MR_LOCAL:
-    if (rsrc->mr_fd >= 0) {
-      if (ftruncate(rsrc->mr_fd, size) < 0) {
-	retv = -errno;
-	goto cleanup;
-      }
-    } else {
-      char *localpath = middfs_localpath(path);
-      if (truncate(localpath, size) < 0) {
-	retv = -errno;
-	goto cleanup;
-      }
-    }
-    break;
+  retv = middfs_rsrc_truncate(rsrc, size);
 
-  default:
-    abort();
-  }
-
- cleanup:
   if (fi == NULL) {
-    int res = middfs_rsrc_delete(rsrc);
+    int res = middfs_rsrc_delete(&rsrc_tmp);
     if (retv >= 0) {
       retv = res;
     }

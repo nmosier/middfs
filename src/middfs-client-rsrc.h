@@ -46,7 +46,11 @@ int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
 int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode);
 int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode);
 int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc);
-
-
+int middfs_rsrc_rmdir(const struct middfs_rsrc *rsrc);
+int middfs_rsrc_truncate(const struct middfs_rsrc *rsrc, off_t size);
+int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
+			const char *to);
+int middfs_rsrc_rename(const struct middfs_rsrc *from,
+		       const struct middfs_rsrc *to);
 
 #endif

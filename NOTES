@@ -8,8 +8,9 @@ FUSE
 
 
 File I/O Functions with Compatible Prototypes:
-(rsrc, mode) open, access, mkdir
+(rsrc, mode) open, access, mkdir (all require sending msg to server)
 (rsrc, statbuf) lstat,
-(rsrc, buf, size) readlink
+(rsrc, buf, size) readlink, read, write
 (rsrc) unlink
+
 

@@ -148,33 +148,22 @@ int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
   switch (rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
+    return -EOPNOTSUPP;
     
   case MR_LOCAL:
     /* open local file */
     localpath = middfs_localpath_tmp(rsrc->mr_path);
     if ((fd = open(localpath, flags, mode)) < 0) {
       retv = -errno;
-      goto cleanup;
+    } else {
+      rsrc->mr_fd = fd;
     }
-    break;
+    free(localpath);
+    return retv;
     
   default:
     abort();
   }
-
-  rsrc->mr_fd = fd;
-  
- cleanup:
-  if (retv < 0) {
-    if (fd >= 0) {
-      close(fd);
-    }
-  }
-  free(localpath);
-
-  return retv;
 }
 
 int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
@@ -185,24 +174,19 @@ int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
   switch (rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
+    return -EOPNOTSUPP;
     
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(rsrc->mr_path);
     if (lstat(localpath, sb) < 0) {
       retv = -errno;
-      goto cleanup;
     }
-    break;
+    free(localpath);
+    return retv;
 
   default:
     abort();
   }
-
- cleanup:
-  free(localpath);
-  return retv;
 }
 
 int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
@@ -213,25 +197,19 @@ int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
   switch (rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
+    return -EOPNOTSUPP;
 
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(rsrc->mr_path);
     if ((retv = readlink(localpath, buf, bufsize)) < 0) {
       retv = -errno;
-      goto cleanup;
     }
-    break;
+    free(localpath);
+    return retv;
 
   default:
     abort();
   }
-
- cleanup:
-  free(localpath);
-  
-  return retv;
 }
 
 int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode) {
@@ -241,24 +219,19 @@ int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode) {
   switch (rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
+    return -EOPNOTSUPP;
 
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(rsrc->mr_path);
     if (access(localpath, mode) < 0) {
       retv = -errno;
-      goto cleanup;
     }
-    break;
+    free(localpath);
+    return retv;
 
   default:
     abort();
   }
-
- cleanup:
-  free(localpath);
-  return retv;
 }
 
 int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode) {
@@ -268,24 +241,19 @@ int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode) {
   switch (rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    retv = -EOPNOTSUPP;
-    goto cleanup;
+    return -EOPNOTSUPP;
 
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(rsrc->mr_path);
     if (mkdir(localpath, mode) < 0) {
       retv = -errno;
     }
-    break;
+    free(localpath);
+    return retv;
 
   default:
     abort();
   }
-  
- cleanup:
-  free(localpath);
-
-  return retv;
 }
 
 int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc) {
@@ -310,4 +278,99 @@ int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc) {
   }
 
   return retv;
+}
+
+int middfs_rsrc_rmdir(const struct middfs_rsrc *rsrc) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    return -EOPNOTSUPP;
+    
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if (rmdir(localpath) < 0) {
+      retv = -errno;
+    }
+    free(localpath);
+    return retv;
+    
+  default:
+    abort();
+  }
+}
+
+
+int middfs_rsrc_truncate(const struct middfs_rsrc *rsrc, off_t size) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    return -EOPNOTSUPP;
+
+  case MR_LOCAL:
+    if (rsrc->mr_fd >= 0) {
+      if (ftruncate(rsrc->mr_fd, size) < 0) {
+	retv = -errno;
+      }
+    } else {
+      localpath = middfs_localpath_tmp(rsrc->mr_path);
+      if (truncate(localpath, size) < 0) {
+	retv = -errno;
+      }
+      free(localpath);
+    }
+    return retv;
+
+  default:
+    abort();
+  }
+}
+
+int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
+			const char *to) {
+  int retv = 0;
+  char *localpath = NULL;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    return -EOPNOTSUPP;
+
+  case MR_LOCAL:
+    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    if (symlink(to, localpath) < 0) {
+      retv = -errno;
+    }
+    free(localpath);
+    return retv;
+
+  default:
+    abort();
+  }
+}
+
+int middfs_rsrc_rename(const struct middfs_rsrc *from,
+		       const struct middfs_rsrc *to) {
+  int retv = 0;
+  
+  if (from->mr_type == MR_LOCAL && to->mr_type == MR_LOCAL) {
+    char *local_to, *local_from;
+    local_from = middfs_localpath_tmp(from->mr_path);
+    local_to = middfs_localpath_tmp(to->mr_path);
+
+    if (rename(local_from, local_to) < 0) {
+      retv = -errno;
+    }
+
+    free(local_to);
+    free(local_from);
+    return retv;
+  } else {
+    return -EOPNOTSUPP;
+  }
 }
