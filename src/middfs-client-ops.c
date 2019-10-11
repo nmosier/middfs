@@ -161,19 +161,6 @@ static int middfs_readdir(const char *path, void *buf,
 }
 
 
-#if 0
-static int middfs_mknod(const char *path, mode_t mode, dev_t rdev) {
-  int retv = 0;
-
-  if (mknod_wrapper(AT_FDCWD, localpath, NULL,mode, rdev) < 0) {
-    retv = -errno;
-  }
-
-  return retv;
-}
-#endif
-
-
 static int middfs_mkdir(const char *path, mode_t mode) {
   int retv = 0;
   int res;
@@ -274,6 +261,7 @@ static int middfs_rename(const char *from, const char *to,
   
 }
 
+#if 0 // No hardlinks supported yet
 static int middfs_link(const char *from, const char *to) {
   int retv = 0;
   char *local_from, *local_to;
@@ -289,22 +277,34 @@ static int middfs_link(const char *from, const char *to) {
   free(local_to);
   return retv;
 }
+#endif
 
 static int middfs_chmod(const char *path, mode_t mode,
 			struct fuse_file_info *fi) {
   int retv = 0;
-  char *local_path;
-
-  local_path = middfs_localpath(path);
-
-  if (chmod(local_path, mode) < 0) {
-    retv = -errno;
+  struct middfs_rsrc *rsrc = NULL;
+  struct middfs_rsrc rsrc_tmp;
+  
+  if (fi != NULL) {
+    rsrc = (struct middfs_rsrc *) fi->fh;
+  } else {
+    if ((retv = middfs_rsrc_create(path, &rsrc_tmp)) < 0) {
+      return retv;
+    }
+    rsrc = &rsrc_tmp;
   }
 
-  free(local_path);
+  retv = middfs_rsrc_chmod(rsrc, mode);
+
+  /* cleanup */
+  if (fi == NULL) {
+    middfs_rsrc_delete(&rsrc_tmp);
+  }
+  
   return retv;
 }
 
+#if 0 /* no changing ownership of local files for now */
 static int middfs_chown(const char *path, uid_t uid, gid_t gid,
 			struct fuse_file_info *fi) {
   int retv = 0;
@@ -319,6 +319,7 @@ static int middfs_chown(const char *path, uid_t uid, gid_t gid,
   free(localpath);
   return retv;  
 }
+#endif
 
 static int middfs_truncate(const char *path, off_t size,
 			   struct fuse_file_info *fi) {
@@ -392,7 +393,7 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
     free(rsrc);
     return retv;
   }
-
+  
   /* update file handle with resource */
   fi->fh = (uint64_t) rsrc;
   return 0;
@@ -467,15 +468,11 @@ static int middfs_write(const char *path, const char *buf,
 
 static int middfs_statfs(const char *path, struct statvfs *stbuf) {
   int retv = 0;
-  char *localpath;
 
-  localpath = middfs_localpath(path);
-
-  if (statvfs(localpath, stbuf) < 0) {
+  if (statvfs(path, stbuf) < 0) {
     retv = -errno;
   }
 
-  free(localpath);
   return retv;
 }
 
@@ -504,9 +501,13 @@ struct fuse_operations middfs_oper =
    .unlink = middfs_unlink,
    .rmdir = middfs_rmdir,
    .rename = middfs_rename,
+#if 0   
    .link = middfs_link,
+#endif   
    .chmod = middfs_chmod,
+#if 0
    .chown = middfs_chown,
+#endif
    .truncate = middfs_truncate,
    .open = middfs_open,
    .create = middfs_create,

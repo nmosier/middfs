@@ -32,7 +32,7 @@ struct middfs_rsrc {
   int mr_fd;
 };
 
-char *middfs_localpath(const char *path);
+// char *middfs_localpath(const char *path);
 char *middfs_localpath_tmp(const char *middfs_path);
 int middfs_abspath(char **path);
 
@@ -52,5 +52,7 @@ int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
 			const char *to);
 int middfs_rsrc_rename(const struct middfs_rsrc *from,
 		       const struct middfs_rsrc *to);
+int middfs_rsrc_chmod(const struct middfs_rsrc *rsrc, mode_t mode);
+
 
 #endif

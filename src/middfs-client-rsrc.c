@@ -10,12 +10,14 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 
 #include "middfs-client-rsrc.h"
 #include "middfs-client.h"
 
 /* utility function definitions */
 
+#if 0
 /* middfs_localpath() -- get path of middfs path in local file
  * system.
  * ARGS:
@@ -30,6 +32,7 @@ char *middfs_localpath(const char *middfs_path) {
   asprintf(&localpath, fmt, middfs_conf.local_dir, middfs_path);
   return localpath;
 }
+#endif
 
 char *middfs_localpath_tmp(const char *middfs_path) {
   char *localpath;
@@ -373,4 +376,33 @@ int middfs_rsrc_rename(const struct middfs_rsrc *from,
   } else {
     return -EOPNOTSUPP;
   }
+}
+
+int middfs_rsrc_chmod(const struct middfs_rsrc *rsrc, mode_t mode) {
+  int retv = 0;
+  char *localpath;
+
+  switch (rsrc->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+    return -EOPNOTSUPP;
+    
+  case MR_LOCAL:
+    if (rsrc->mr_fd >= 0) {
+      if (fchmod(rsrc->mr_fd, mode) < 0) {
+	retv = -errno;
+      }
+    } else {
+      localpath = middfs_localpath_tmp(rsrc->mr_path);
+      if (lchmod(localpath, mode) < 0) {
+	retv = -errno;
+      }
+      free(localpath);
+    }
+    return retv;
+    
+  default:
+    abort();
+  }
+  
 }
