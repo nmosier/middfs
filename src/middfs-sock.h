@@ -25,6 +25,13 @@ struct middfs_socks {
   struct pollfd *pollfds;
   struct middfs_sockinfo *sockinfos;
   nfds_t count;
+  nfds_t len;
 };
+
+int middfs_socks_init(struct middfs_socks *socks);
+int middfs_socks_delete(struct middfs_socks *socks);
+int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks);
+int middfs_socks_add(int sockfd, struct middfs_sockinfo *sockinfo,
+                     struct middfs_socks *socks);
 
 #endif

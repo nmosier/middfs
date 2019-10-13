@@ -3,6 +3,10 @@
  */
 
 #include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "middfs-sock.h"
 
@@ -14,6 +18,10 @@
  */
 int middfs_socks_init(struct middfs_socks *socks) {
   memset(socks, sizeof(*socks), 0);
+  if (middfs_socks_resize(1, socks) < 0) {
+    return -1;
+  }
+
   return 0;
 }
 
@@ -65,10 +73,45 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
     perror("middfs_socks_resize: realloc");
     return -1;
   }
-  sock->sockinfos = ptr;
-
-  sock->count = newlen;
   
+  socks->sockinfos = ptr;
+  socks->len = newlen;
+
   return 0;
 }
 
+
+int middfs_socks_add(int sockfd, struct middfs_sockinfo *sockinfo,
+		     struct middfs_socks *socks) {
+
+  /* resize if necessary */
+  if (socks->count == socks->len) {
+    nfds_t new_len = 2 * socks->len;
+    
+    if (middfs_socks_resize(new_len, socks) < 0) {
+      return -1;
+    }
+  }
+
+  struct pollfd *pollfd = &socks->pollfds[socks->count];
+  pollfd->fd = sockfd;
+  
+  switch (sockinfo->type) {
+  case MFD_CREQ:
+  case MFD_SREQ:
+    pollfd->events = POLLIN | POLLOUT;
+    break;
+    
+  case MFD_LSTN:
+    pollfd->events = POLLIN;
+    break;
+    
+  default:
+    abort();
+  }
+
+  socks->sockinfos[socks->count] = *sockinfo;
+  socks->count ++;
+
+  return 0;
+}
