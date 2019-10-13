@@ -14,3 +14,37 @@ File I/O Functions with Compatible Prototypes:
 (rsrc) unlink
 
 
+DIAGRAM
+
+
+SERVER
+
+----------------------------
+|server metadata filesystem|
+----------------------------
+
+
+  ___________________________
+ /                          /|
+/--------------------------/ |
+|   server packet handler  | /
+----------------------------/
+  ^                | outgoing       
+  | incoming       | packets
+  | packets        v
+----------------------------
+| server connection handler|
+----------------------------
+
+
+
+I. Server
+   A. Server Metadata Filesystem
+   B. Server Packet Handler
+   C. Server Connection Handler
+
+II. Client
+   A. Client FUSE Filesystem
+   B. Client Requester
+   C. Client Responder
+
