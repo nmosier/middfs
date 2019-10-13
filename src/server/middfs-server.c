@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include "middfs-server-conn.h"
+
 #define LISTEN_PORT_DEFAULT 4321
 
 int main(int argc, char *argv[]) {
@@ -47,6 +49,21 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, usage, argv[0]);
     exit(1);
   }
+
+
+
+  //// TESTING /////
+  int servfd = -1;
+  if ((servfd = server_start("4321", 10)) < 0) {
+    exit(2);
+  }
+
+  int clientfd = -1;
+  if ((clientfd = server_accept(servfd)) < 0) {
+    exit(3);
+  }
+
+  printf("client fd = %d\n", clientfd);
 
   return 0;
 }

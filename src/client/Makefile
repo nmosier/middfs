@@ -2,6 +2,7 @@ SRCS = middfs-client.c middfs-client-ops.c middfs-client-rsrc.c
 HDRS = middfs-client.h middfs-client-ops.h middfs-client-rsrc.h
 OBJS = $(SRCS:.c=.o)
 BIN = middfs-client
+IFLAGS = -I..
 
 CFLAGS = -c `pkg-config fuse3 --cflags` -g -Wall -pedantic
 LDLIBS = `pkg-config fuse3 --libs`

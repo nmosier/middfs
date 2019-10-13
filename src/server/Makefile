@@ -1,11 +1,11 @@
 # middfs-server Makefile
 
 SRCS = middfs-server.c middfs-server-conn.c
-HDRS =
+HDRS = middfs-server-conn.h
 OBJS = $(SRCS:.c=.o)
 BIN  = middfs-server
-
 CFLAGS = -c -g -Wall -pedantic
+IFLAGS = -I..
 
 # Default Running Parameters
 
