@@ -4,8 +4,7 @@ SRCS = middfs-server.c middfs-server-conn.c
 HDRS = middfs-server-conn.h
 OBJS = $(SRCS:.c=.o)
 BIN  = middfs-server
-CFLAGS = -c -g -Wall -pedantic
-IFLAGS = -I..
+CFLAGS = -c -g -Wall -pedantic -I..
 
 # Default Running Parameters
 
