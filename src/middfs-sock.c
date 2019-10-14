@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <assert.h>
 
 #include "middfs-sock.h"
 
@@ -32,15 +34,11 @@ int middfs_socks_init(struct middfs_socks *socks) {
  */
 int middfs_socks_delete(struct middfs_socks *socks) {
   int retv = 0;
-  
+
   /* close any open sockets */
-  for (int i = 0; i < socks->count; ++i) {
-    int sockfd;
-    if ((sockfd = socks->pollfds[i].fd) >= 0) {
-      if (close(sockfd) < 0) {
-	perror("middfs_socks_delete: close");
-	retv = -1;
-      }
+  for (nfds_t i = 0; i < socks->count; ++i) {
+    if (middfs_socks_remove(i, socks) < 0) {
+      retv = -1;
     }
   }
   
@@ -62,7 +60,6 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
   /* realloc pollfds array */
   if ((ptr = realloc(socks->pollfds,
 		     newlen * sizeof(*socks->pollfds))) == NULL) {
-    perror("middfs_socks_resize: realloc");
     return -1;
   }
   socks->pollfds = ptr;
@@ -70,7 +67,6 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
   /* realloc sockinfos array */
   if ((ptr = realloc(socks->pollfds,
 		     newlen * sizeof(*socks->sockinfos))) == NULL) {
-    perror("middfs_socks_resize: realloc");
     return -1;
   }
   
@@ -105,13 +101,63 @@ int middfs_socks_add(int sockfd, struct middfs_sockinfo *sockinfo,
   case MFD_LSTN:
     pollfd->events = POLLIN;
     break;
-    
+
+  case MFD_NONE:
   default:
     abort();
   }
 
   socks->sockinfos[socks->count] = *sockinfo;
-  socks->count ++;
+  ++socks->count;
 
+  if (sockfd >= 0) {
+    ++socks->nopen;
+  }
+
+  return 0;
+}
+
+int middfs_socks_remove(nfds_t index, struct middfs_socks *socks) {
+  int retv = 0;
+  
+  assert(index < socks->count);
+  
+  int *fdp = &socks->pollfds[index].fd;
+  
+  if (*fdp < 0) {
+    errno = ENOTCONN;
+    return -1;
+  }
+  
+  if (close(*fdp) < 0) {
+    return -1;
+  }
+
+  *fdp = -1; /* mark as deleted */
+  if (middfs_sockinfo_delete(&socks->sockinfos[index]) < 0) {
+    retv = -1;
+  }
+
+  /* update counts */
+  --socks->nopen;
+  --socks->count;
+
+  return retv;
+}
+
+
+
+/******************
+ * SOCKINFO funcs *
+ *****************/
+
+int middfs_sockinfo_init(enum middfs_socktype type,
+			 struct middfs_sockinfo *info) {
+  info->type = type;
+  return 0;
+}
+
+int middfs_sockinfo_delete(struct middfs_sockinfo *info) {
+  info->type = MFD_NONE;
   return 0;
 }
