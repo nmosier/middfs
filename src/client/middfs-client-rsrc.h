@@ -19,17 +19,7 @@ struct client_rsrc {
    */
   enum client_rsrc_type {MR_NETWORK, MR_LOCAL, MR_ROOT} mr_type;
 
-#if 1
   struct rsrc mr_rsrc;
-#else 
-  /* mr_owner: who owns this file, i.e. under which
-   * middfs subdirectory it appears */
-  char *mr_owner;
-
-  /* mr_path: path of this file, relative to owner folder
-   * NOTE: should still start with leading '/'. */
-  char *mr_path;
-#endif
   
   /* mr_fd: file descriptor (MR_LOCAL) or socket descriptor
    * (MR_NETWORK). Not used for MR_ROOT. Should be initialized

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 
 
-  //// TESTING /////
+  //// TESTING ////
   int servfd = -1;
   if ((servfd = server_start("4321", 10)) < 0) {
     exit(2);
@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
   }
 
   printf("client fd = %d\n", clientfd);
+
+  /* test resource */
 
   return 0;
 }
