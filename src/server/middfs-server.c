@@ -8,6 +8,8 @@
 #include <limits.h>
 
 #include "middfs-server-conn.h"
+#include "middfs-rsrc.h"
+#include "middfs-util.h"
 
 #define LISTEN_PORT_DEFAULT "4321"
 
@@ -56,7 +58,15 @@ int main(int argc, char *argv[]) {
 
   printf("client fd = %d\n", clientfd);
 
+  char rsrc_buff[64*sizeof(char)];
+  struct rsrc *rsrc;
+  int errp = 0;
+  
   /* test resource */
+  deserialize_rsrc(rsrc_buff, 32, rsrc, &errp);
+
+  printf("client's name is %s\n", rsrc->mr_owner);
+  printf("client's file path %s\n", rsrc->mr_path);
 
   return 0;
 }
