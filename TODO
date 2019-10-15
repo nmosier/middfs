@@ -8,19 +8,14 @@ DONE
 [X] Rewrite file ops to use middfs_rsrc as file handle.
 
 TODO
-[ ] Fix symlink bug/inconsistency -- compare against actual ln(1) utility
-[ ] Automated tests
-[ ] Write middfs_rsrc_open() function for opening resource
-    (would involve opening a file descriptor (local) and socket
-    (network))
-[ ] Remove chown file op -- requires root access so useless for middfs.
-[ ] Check if file is on local disk; if not, ping server for file.
-[ ] Write basic server that handles requests and returns a dummy
-    file.
-[ ] Design a basic packet format for client<->server communication.
-[ ] Maintain configuration directory in ~/.middfs-d and config
-    file in ~/.middfs-d/middfs.conf.
-[ ] Use mount(2)/umount(2) system calls instead of calling system(3).
+[ ] Transition middfs-client-rsrc.[ch] to being shared code
+    [ ] Embed middfs_rsrc struct in middfs_request struct
+[ ] Write serialization functions
+    [ ] string serialization utility function
+    [ ] middfs_rsrc
+    [ ] middfs_request
+    [ ] middfs_packet
+
 
 client dir (static, local) vs. client name (determined by server
 upon connecting)

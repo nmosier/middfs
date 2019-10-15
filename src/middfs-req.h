@@ -1,0 +1,55 @@
+/* middfs-req.h -- shared structure for middfs requests
+ * Nicholas Mosier & Tommaso Monaco 2019
+ */
+
+#ifndef __MIDDFS_REQ_H
+#define __MIDDFS_REQ_H
+
+#define MPKT_MAGIC 1800
+
+enum middfs_packet_type
+  {MPKT_NONE,
+   MPKT_CONNECT,
+   MPKT_DISCONNECT,
+   MPKT_FILEOP,
+  };
+
+enum middfs_request_type
+  {MREQ_NONE,
+   MREQ_GETATTR,
+   MREQ_ACCESS,
+   MREQ_READLINK,
+   MREQ_MKDIR,
+   MREQ_SYMLINK,
+   MREQ_UNLINK,
+   MREQ_RMDIR,
+   MREQ_RENAME,
+   MREQ_CHMOD,
+   MREQ_TRUNCATE,
+   MREQ_OPEN,
+   MREQ_CREATE,
+   MREQ_READ,
+   MREQ_WRITE,
+   MREQ_READDIR,
+   MREQ_USERS,
+  };
+
+/* TODO:  write serializer & deserializer for these structs */
+struct middfs_request {
+  enum middfs_request_type mreq_type;
+
+  char *mreq_requester;
+  char *mreq_path;
+  char *mreq_owner;
+};
+
+struct middfs_packet {
+  int mpkt_magic;
+  enum middfs_packet_type mpkt_type;
+  union {
+    struct middfs_request mpkt_request;
+    // TODO -- add structs for other packet possibilities
+  };
+}
+
+#endif

@@ -1,4 +1,4 @@
-/* middfs-client-rsrc.c -- implementation of utility functions for
+/* middfs-client-client_rsrc.c -- implementation of utility functions for
  * middfs-client
  * Tommaso Monaco & Nicholas Mosier
  * Oct 2019
@@ -70,11 +70,11 @@ int middfs_abspath(char **path) {
 }
 
 
-/* middfs_rsrc_create() -- construct resource from path
+/* client_rsrc_create() -- construct resource from path
  * ARGS:
  * RETV: returns 0 on success; -errno on error.
  */
-int middfs_rsrc_create(const char *path, struct middfs_rsrc *rsrc) {
+int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc) {
   /* find owner string in _path_ */
   const char *owner_begin = path + strspn(path, "/");
 
@@ -84,56 +84,56 @@ int middfs_rsrc_create(const char *path, struct middfs_rsrc *rsrc) {
 
   if (*owner_begin == '\0') {
     /* requesting middfs root -- special type of request */
-    rsrc->mr_owner = rsrc->mr_path = NULL;
-    rsrc->mr_type = MR_ROOT;
+    client_rsrc->mr_rsrc.mr_owner = client_rsrc->mr_rsrc.mr_path = NULL;
+    client_rsrc->mr_type = MR_ROOT;
   } else {
     /* requesting something in a user directory */
     
     const char *owner_end = owner_begin + strcspn(owner_begin, "/");
   
     /* dup and save owner string */
-    rsrc->mr_owner = strndup(owner_begin, owner_end - owner_begin);
+    client_rsrc->mr_rsrc.mr_owner = strndup(owner_begin, owner_end - owner_begin);
   
     /* find owner path string */
     if (*owner_end == '\0') {
-      rsrc->mr_path = strdup("/");
+      client_rsrc->mr_rsrc.mr_path = strdup("/");
     } else {
-      rsrc->mr_path = strdup(owner_end);
+      client_rsrc->mr_rsrc.mr_path = strdup(owner_end);
     }
 
     /* find resource type */
-    if (strcmp(rsrc->mr_owner, middfs_conf.client_name) != 0) {
-      rsrc->mr_type = MR_NETWORK; /* resource not owned by client */
+    if (strcmp(client_rsrc->mr_rsrc.mr_owner, middfs_conf.client_name) != 0) {
+      client_rsrc->mr_type = MR_NETWORK; /* resource not owned by client */
     } else {
-      rsrc->mr_type = MR_LOCAL; /* resource owned by client */
+      client_rsrc->mr_type = MR_LOCAL; /* resource owned by client */
     }
 
   }
   
   /* initialize other fields */
-  rsrc->mr_fd = -1;
+  client_rsrc->mr_fd = -1;
   
   return 0; /* success */
 }
 
-int middfs_rsrc_delete(struct middfs_rsrc *rsrc) {
+int client_rsrc_delete(struct client_rsrc *client_rsrc) {
   int retv = 0;
 
-  if (rsrc != NULL) {
-    if (rsrc->mr_fd >= 0) {
-      if (close(rsrc->mr_fd) < 0) {
+  if (client_rsrc != NULL) {
+    if (client_rsrc->mr_fd >= 0) {
+      if (close(client_rsrc->mr_fd) < 0) {
 	retv = -errno;
       }
     }
     
-    free(rsrc->mr_owner);
-    free(rsrc->mr_path);
+    free(client_rsrc->mr_rsrc.mr_owner);
+    free(client_rsrc->mr_rsrc.mr_path);
   }
   
   return retv;
 }
 
-int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
+int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
   va_list args; /* only needed if (flags & O_CREAT) -- will contain
 		 * _mode_ param (for more info man open(2))*/
   int retv = 0;
@@ -148,18 +148,18 @@ int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
     va_end(args);
   }
   
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
     
   case MR_LOCAL:
     /* open local file */
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if ((fd = open(localpath, flags, mode)) < 0) {
       retv = -errno;
     } else {
-      rsrc->mr_fd = fd;
+      client_rsrc->mr_fd = fd;
     }
     free(localpath);
     return retv;
@@ -169,18 +169,18 @@ int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...) {
   }
 }
 
-int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
+int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 		      struct stat *sb) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
     
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (lstat(localpath, sb) < 0) {
       retv = -errno;
     }
@@ -192,18 +192,18 @@ int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
   }
 }
 
-int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
+int client_rsrc_readlink(const struct client_rsrc *client_rsrc,
 			 char *buf, size_t bufsize) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
 
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if ((retv = readlink(localpath, buf, bufsize)) < 0) {
       retv = -errno;
     }
@@ -215,17 +215,17 @@ int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
   }
 }
 
-int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode) {
+int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
 
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (access(localpath, mode) < 0) {
       retv = -errno;
     }
@@ -237,17 +237,17 @@ int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode) {
   }
 }
 
-int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode) {
+int client_rsrc_mkdir(const struct client_rsrc *client_rsrc, mode_t mode) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
 
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (mkdir(localpath, mode) < 0) {
       retv = -errno;
     }
@@ -259,17 +259,17 @@ int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode) {
   }
 }
 
-int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc) {
+int client_rsrc_unlink(const struct client_rsrc *client_rsrc) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
     
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (unlink(localpath) < 0) {
       retv = -errno;
     }
@@ -283,17 +283,17 @@ int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc) {
   return retv;
 }
 
-int middfs_rsrc_rmdir(const struct middfs_rsrc *rsrc) {
+int client_rsrc_rmdir(const struct client_rsrc *client_rsrc) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
     
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (rmdir(localpath) < 0) {
       retv = -errno;
     }
@@ -306,22 +306,22 @@ int middfs_rsrc_rmdir(const struct middfs_rsrc *rsrc) {
 }
 
 
-int middfs_rsrc_truncate(const struct middfs_rsrc *rsrc, off_t size) {
+int client_rsrc_truncate(const struct client_rsrc *client_rsrc, off_t size) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
 
   case MR_LOCAL:
-    if (rsrc->mr_fd >= 0) {
-      if (ftruncate(rsrc->mr_fd, size) < 0) {
+    if (client_rsrc->mr_fd >= 0) {
+      if (ftruncate(client_rsrc->mr_fd, size) < 0) {
 	retv = -errno;
       }
     } else {
-      localpath = middfs_localpath_tmp(rsrc->mr_path);
+      localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
       if (truncate(localpath, size) < 0) {
 	retv = -errno;
       }
@@ -334,18 +334,18 @@ int middfs_rsrc_truncate(const struct middfs_rsrc *rsrc, off_t size) {
   }
 }
 
-int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
+int client_rsrc_symlink(const struct client_rsrc *client_rsrc,
 			const char *to) {
   int retv = 0;
   char *localpath = NULL;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
 
   case MR_LOCAL:
-    localpath = middfs_localpath_tmp(rsrc->mr_path);
+    localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (symlink(to, localpath) < 0) {
       retv = -errno;
     }
@@ -357,14 +357,14 @@ int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
   }
 }
 
-int middfs_rsrc_rename(const struct middfs_rsrc *from,
-		       const struct middfs_rsrc *to) {
+int client_rsrc_rename(const struct client_rsrc *from,
+		       const struct client_rsrc *to) {
   int retv = 0;
   
   if (from->mr_type == MR_LOCAL && to->mr_type == MR_LOCAL) {
     char *local_to, *local_from;
-    local_from = middfs_localpath_tmp(from->mr_path);
-    local_to = middfs_localpath_tmp(to->mr_path);
+    local_from = middfs_localpath_tmp(from->mr_rsrc.mr_path);
+    local_to = middfs_localpath_tmp(to->mr_rsrc.mr_path);
 
     if (rename(local_from, local_to) < 0) {
       retv = -errno;
@@ -378,22 +378,22 @@ int middfs_rsrc_rename(const struct middfs_rsrc *from,
   }
 }
 
-int middfs_rsrc_chmod(const struct middfs_rsrc *rsrc, mode_t mode) {
+int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode) {
   int retv = 0;
   char *localpath;
 
-  switch (rsrc->mr_type) {
+  switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
     
   case MR_LOCAL:
-    if (rsrc->mr_fd >= 0) {
-      if (fchmod(rsrc->mr_fd, mode) < 0) {
+    if (client_rsrc->mr_fd >= 0) {
+      if (fchmod(client_rsrc->mr_fd, mode) < 0) {
 	retv = -errno;
       }
     } else {
-      localpath = middfs_localpath_tmp(rsrc->mr_path);
+      localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
       if (lchmod(localpath, mode) < 0) {
 	retv = -errno;
       }
@@ -406,3 +406,9 @@ int middfs_rsrc_chmod(const struct middfs_rsrc *rsrc, mode_t mode) {
   }
   
 }
+
+
+/***********************************
+ *    Network-Related Functions    *
+ ***********************************/
+ 

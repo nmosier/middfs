@@ -1,4 +1,4 @@
-/* middfs-client-rsrc.h -- interface for utility functions for
+/* middfs-client-client_rsrc.h -- interface for utility functions for
  * middfs-client
  * Tommaso Monaco & Nicholas Mosier
  * Oct 2019
@@ -9,14 +9,19 @@
 
 #include <sys/stat.h>
 
-struct middfs_rsrc {
+#include "middfs-rsrc.h"
+
+struct client_rsrc {
   /* mr_type: type of resource (local or network)
    * MR_NETWORK: the file is located on the network 
    * MR_LOCAL: the file is located on this client machine 
    * MR_ROOT: resource is the middfs root directory ("/"). 
    */
-  enum middfs_rsrc_type {MR_NETWORK, MR_LOCAL, MR_ROOT} mr_type;
+  enum client_rsrc_type {MR_NETWORK, MR_LOCAL, MR_ROOT} mr_type;
 
+#if 1
+  struct rsrc mr_rsrc;
+#else 
   /* mr_owner: who owns this file, i.e. under which
    * middfs subdirectory it appears */
   char *mr_owner;
@@ -24,7 +29,8 @@ struct middfs_rsrc {
   /* mr_path: path of this file, relative to owner folder
    * NOTE: should still start with leading '/'. */
   char *mr_path;
-
+#endif
+  
   /* mr_fd: file descriptor (MR_LOCAL) or socket descriptor
    * (MR_NETWORK). Not used for MR_ROOT. Should be initialized
    * to -1.
@@ -36,23 +42,23 @@ struct middfs_rsrc {
 char *middfs_localpath_tmp(const char *middfs_path);
 int middfs_abspath(char **path);
 
-int middfs_rsrc_create(const char *path, struct middfs_rsrc *rsrc);
-int middfs_rsrc_delete(struct middfs_rsrc *rsrc);
-int middfs_rsrc_open(struct middfs_rsrc *rsrc, int flags, ...);
-int middfs_rsrc_lstat(const struct middfs_rsrc *rsrc,
+int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc);
+int client_rsrc_delete(struct client_rsrc *client_rsrc);
+int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...);
+int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 		      struct stat *sb);
-int middfs_rsrc_readlink(const struct middfs_rsrc *rsrc,
+int client_rsrc_readlink(const struct client_rsrc *client_rsrc,
 			 char *buf, size_t bufsize);
-int middfs_rsrc_access(const struct middfs_rsrc *rsrc, int mode);
-int middfs_rsrc_mkdir(const struct middfs_rsrc *rsrc, mode_t mode);
-int middfs_rsrc_unlink(const struct middfs_rsrc *rsrc);
-int middfs_rsrc_rmdir(const struct middfs_rsrc *rsrc);
-int middfs_rsrc_truncate(const struct middfs_rsrc *rsrc, off_t size);
-int middfs_rsrc_symlink(const struct middfs_rsrc *rsrc,
+int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode);
+int client_rsrc_mkdir(const struct client_rsrc *client_rsrc, mode_t mode);
+int client_rsrc_unlink(const struct client_rsrc *client_rsrc);
+int client_rsrc_rmdir(const struct client_rsrc *client_rsrc);
+int client_rsrc_truncate(const struct client_rsrc *client_rsrc, off_t size);
+int client_rsrc_symlink(const struct client_rsrc *client_rsrc,
 			const char *to);
-int middfs_rsrc_rename(const struct middfs_rsrc *from,
-		       const struct middfs_rsrc *to);
-int middfs_rsrc_chmod(const struct middfs_rsrc *rsrc, mode_t mode);
+int client_rsrc_rename(const struct client_rsrc *from,
+		       const struct client_rsrc *to);
+int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode);
 
 
 #endif

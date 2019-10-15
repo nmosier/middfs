@@ -48,3 +48,11 @@ II. Client
    B. Client Requester
    C. Client Responder
 
+
+
+USEFUL STUFF
+
+htonl(3) -- convert host endianness to network endianness
+(also see byteorder(9))
+
+About structuring data sent over the network: https://stackoverflow.com/questions/1577161/passing-a-structure-through-sockets-in-c
