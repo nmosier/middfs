@@ -70,7 +70,7 @@ size_t deserialize_str(const void *buf, size_t nbytes,
     len = nbytes + 1; /* indicate more bytes required */
   }
   
-  return len;
+  return len + 1;
 }
 
 /* sizerem() -- get remaining size given total size and used size.

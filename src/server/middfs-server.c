@@ -59,14 +59,20 @@ int main(int argc, char *argv[]) {
   printf("client fd = %d\n", clientfd);
 
   char rsrc_buff[64*sizeof(char)];
-  struct rsrc *rsrc;
+  struct rsrc rsrc;
   int errp = 0;
+  ssize_t nbytes;
+
+  /* read bytes into buffer */
+  if ((nbytes = read(clientfd, rsrc_buff, 64)) < 0) {
+    perror("read");
+  }
   
   /* test resource */
-  deserialize_rsrc(rsrc_buff, 32, rsrc, &errp);
+  deserialize_rsrc(rsrc_buff, (size_t) nbytes, &rsrc, &errp);
 
-  printf("client's name is %s\n", rsrc->mr_owner);
-  printf("client's file path %s\n", rsrc->mr_path);
+  printf("client's name is %s\n", rsrc.mr_owner);
+  printf("client's file path %s\n", rsrc.mr_path);
 
   return 0;
 }
