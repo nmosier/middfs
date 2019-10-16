@@ -136,24 +136,50 @@ int middfs_socks_remove(nfds_t index, struct middfs_socks *socks) {
     retv = -1;
   }
 
-
-  /* update counts */
-  --socks->nopen;
-  --socks->count;
-
-  /* move tail entry to gap filled, if possible 
-   * This maintains the invariant that the last valid entry
-   * in the sockfds array is at index _count_-1 */
-  if (socks->count != index) {
-    memcpy(&socks->pollfds[index], &socks->pollfds[socks->count],
-	   sizeof(socks->pollfds[index]));
-    memcpy(&socks->sockinfos[index], &socks->sockinfos[socks->count],
-	   sizeof(socks->sockinfos[index]));
-  }
-  
   return retv;
 }
 
+/* middfs_socks_pack() -- pack open sockets to beginning of array
+ * ARGS:
+ *  - socks: socket array
+ * RETV: the number of open sockets in the array; -1 on error
+ */
+int middfs_socks_pack(struct middfs_socks *socks) {
+  int nopen = 0;
+  
+  for (int closed_index = 0; closed_index < socks->count; ++closed_index) {
+    if (socks->pollfds[closed_index].fd < 0) { /* if current entry is closed, try to fill it with open socket */
+      
+      for (int open_index = closed_index + 1;
+	   open_index < socks->count; ++open_index) {
+	
+	if (socks->pollfds[open_index].fd >= 0) {
+	  
+	  /* copy this entry (an open socket) to fill the gap of
+	   * the closed socket (which we no longer care about) */
+	  memcpy(&socks->pollfds[closed_index], &socks->pollfds[open_index],
+		 sizeof(socks->pollfds[closed_index]));
+	  memcpy(&socks->sockinfos[closed_index], &socks->sockinfos[open_index],
+		 sizeof(socks->sockinfos[closed_index]));
+
+	  /* mark entry at open_index as invalid 
+	   * (to avoid duplication) */
+	  socks->pollfds[open_index].fd = -1;
+
+	  break;
+	}
+	
+      }
+      
+    } else {
+      ++nopen;
+    }
+  }
+
+  socks->count = nopen;
+
+  return nopen;
+}
 
 
 /******************

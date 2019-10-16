@@ -45,5 +45,7 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks);
 int middfs_socks_add(int sockfd, const struct middfs_sockinfo *sockinfo,
                      struct middfs_socks *socks);
 int middfs_socks_remove(nfds_t index, struct middfs_socks *socks);
+int middfs_socks_pack(struct middfs_socks *socks);
+
 
 #endif

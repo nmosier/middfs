@@ -118,7 +118,6 @@ int server_loop(struct middfs_socks *socks) {
       continue;
     }
 
-    /* */
     int client_sockfd; /* for MFD_LSTN */
     switch (socks->sockinfos[index].type) {
     case MFD_CREQ:
@@ -126,8 +125,23 @@ int server_loop(struct middfs_socks *socks) {
 	// TEST //
 	int bytes_read;
 	char buf[64];
+	
 	bytes_read = read(fd, buf, 64);
-	printf("%s", buf);
+
+	if (bytes_read < 0) {
+	  /* read error */
+	  perror("read");
+	} else if (bytes_read == 0) {
+	  /* EOF, so remove client from list 
+	   * TODO: might need to throw error or parse/deserialize
+	   * any data that has already been read
+	   * But for now, just remove the client socket from the 
+	   * socket list.
+	   */
+	  middfs_socks_remove(index, socks);
+	} else {
+	  printf("%s\n", buf);
+	}
 	// TEST //
       }
       break;
@@ -155,7 +169,8 @@ int server_loop(struct middfs_socks *socks) {
       abort();
     }
   }
-  
+
+  fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
   
   return retv;
   /* TODO: perhaps this should return the number of open 
