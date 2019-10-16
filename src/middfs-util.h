@@ -12,4 +12,7 @@ size_t deserialize_str(const void *buf, size_t nbytes,
 		       char **strp, int *errp);
 size_t sizerem(size_t nbytes, size_t used);
 
+#define MAX(i1, i2) ((i1) < (i2) ? (i2) : (i1))
+#define MIN(i1, i2) ((i1) < (i2) ? (i1) : (i2))
+
 #endif
