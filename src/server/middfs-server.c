@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
     exit(3);
   }
 
+  
   printf("client fd = %d\n", clientfd);
 
   char rsrc_buff[64*sizeof(char)];

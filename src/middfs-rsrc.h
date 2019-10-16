@@ -16,10 +16,4 @@ struct rsrc {
   char *mr_path;
 };
 
-size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
-		      size_t nbytes);
-size_t deserialize_rsrc(const void *buf, size_t nbytes,
-			struct rsrc *rsrc, int *errp);
-
-
 #endif
