@@ -26,6 +26,7 @@
 
 #include "middfs-client-ops.h"
 #include "middfs-client-rsrc.h"
+#include "middfs-serial.h"
 
 /* file I/O function definitions */
 
