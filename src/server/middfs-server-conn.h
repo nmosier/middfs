@@ -12,3 +12,4 @@ int server_accept(int servfd);
 int server_loop(struct middfs_socks *socks);
 
 #endif
+
