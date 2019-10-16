@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "middfs-util.h"
 #include "middfs-sock.h"
 
 /* middfs_socks_init() -- initialize the _socks_ struct for use
@@ -20,10 +21,6 @@
  */
 int middfs_socks_init(struct middfs_socks *socks) {
   memset(socks, sizeof(*socks), 0);
-  if (middfs_socks_resize(1, socks) < 0) {
-    return -1;
-  }
-
   return 0;
 }
 
@@ -77,12 +74,13 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
 }
 
 
-int middfs_socks_add(int sockfd, struct middfs_sockinfo *sockinfo,
+int middfs_socks_add(int sockfd,
+		     const struct middfs_sockinfo *sockinfo,
 		     struct middfs_socks *socks) {
 
   /* resize if necessary */
   if (socks->count == socks->len) {
-    nfds_t new_len = 2 * socks->len;
+    nfds_t new_len = MAX(2 * socks->len, 16);
     
     if (middfs_socks_resize(new_len, socks) < 0) {
       return -1;
@@ -95,7 +93,7 @@ int middfs_socks_add(int sockfd, struct middfs_sockinfo *sockinfo,
   switch (sockinfo->type) {
   case MFD_CREQ:
   case MFD_SREQ:
-    pollfd->events = POLLIN | POLLOUT;
+    pollfd->events = POLLIN;
     break;
     
   case MFD_LSTN:
@@ -138,10 +136,21 @@ int middfs_socks_remove(nfds_t index, struct middfs_socks *socks) {
     retv = -1;
   }
 
+
   /* update counts */
   --socks->nopen;
   --socks->count;
 
+  /* move tail entry to gap filled, if possible 
+   * This maintains the invariant that the last valid entry
+   * in the sockfds array is at index _count_-1 */
+  if (socks->count != index) {
+    memcpy(&socks->pollfds[index], &socks->pollfds[socks->count],
+	   sizeof(socks->pollfds[index]));
+    memcpy(&socks->sockinfos[index], &socks->sockinfos[socks->count],
+	   sizeof(socks->sockinfos[index]));
+  }
+  
   return retv;
 }
 
