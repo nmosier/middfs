@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 
+
 /* sizerem() -- get remaining size given total size and used size.
  * RETV: if _nbytes_ >= _used_, returns _nbytes_ - _used_;
  *       otherwise returns 0.

@@ -17,6 +17,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+// TEMPORARY //
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+// TEMPORARY //
+
 #include "middfs-client-ops.h"
 #include "middfs-client-rsrc.h"
 
@@ -386,6 +393,37 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
     free(client_rsrc);
     return retv;
   }
+
+  // TEMPORARY
+  struct rsrc *rsrc = &client_rsrc->mr_rsrc;
+  int sockfd;
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    perror("socket");
+  }
+  int servport = 4321;
+  struct sockaddr_in addr = {0};
+  addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(servport);
+
+  int conn;
+  if ((conn = connect(sockfd, (struct sockaddr *) &addr,
+		      sizeof(addr))) < 0) {
+    perror("connect");
+  }
+
+  char buf[64];
+  size_t bytes;
+  if ((bytes = serialize_rsrc(rsrc, buf, 64)) > 64) {
+    fprintf(stderr, "too many bytes\n");
+  }
+  if (send(sockfd, buf, bytes, 0) < bytes) {
+    fprintf(stderr, "send failed");
+  }
+  close(sockfd);
+  
+  
+  // TEMPORARY
 
   /* open resource */
   if ((retv = client_rsrc_open(client_rsrc, fi->flags)) < 0) {
