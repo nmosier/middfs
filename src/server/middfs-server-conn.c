@@ -95,6 +95,75 @@ int server_accept(int servfd) {
    return client_fd;
 }
 
+
+int server_loop(struct middfs_socks *socks) {
+  int retv = 0;
+
+  int readyfds = poll(socks->pollfds, socks->count, INFTIM);
+  if (readyfds < 0) {
+    perror("server_loop: poll");
+    return -1;
+  }
+
+  for (int index = 0; index < socks->count; ++index) {
+    int revents = socks->pollfds[index].revents;
+    int fd = socks->pollfds[index].fd;
+
+    /* remove socket if error occurred */
+    if (revents & (POLLERR | POLLHUP)) {
+      if (middfs_socks_remove(index, socks) < 0) {
+	abort(); /* TODO */
+      }
+      --index;
+      continue;
+    }
+
+    /* */
+    int client_sockfd; /* for MFD_LSTN */
+    switch (socks->sockinfos[index].type) {
+    case MFD_CREQ:
+      if (revents & POLLIN) {
+	// TEST //
+	int bytes_read;
+	char buf[64];
+	bytes_read = read(fd, buf, 64);
+	printf("%s", buf);
+	// TEST //
+      }
+      break;
+      
+    case MFD_SREQ:
+      /* TODO -- not yet implemented */
+      abort();
+      
+    case MFD_LSTN: /* POLLIN -- accept new client connection */
+      if (revents == POLLIN) {
+	if ((client_sockfd = server_accept(fd)) >= 0) {
+	  /* valid client connection, so add to socket list */
+	  struct middfs_sockinfo sockinfo = {MFD_CREQ};
+	  if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
+	    perror("middfs_socks_add"); /* TODO -- resize should perr */
+	    close(client_sockfd);
+	    continue;
+	  }
+	}
+      }
+      break;
+      
+    case MFD_NONE:
+    default:
+      abort();
+    }
+  }
+  
+  
+  return retv;
+  /* TODO: perhaps this should return the number of open 
+   * sockets -- if this ever reaches 0, then the server should shut
+   * down. */
+}
+
+
 #if 0
 /* server_loop()
  * DESC: repeatedly poll(2)'s server socket for new connections to accept and client sockets
