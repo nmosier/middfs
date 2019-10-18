@@ -4,6 +4,7 @@
  */
 
 #include <string.h>
+#include <stdarg.h>
 
 #include "middfs-utils.h"
 #include "middfs-serial.h"
@@ -107,3 +108,28 @@ size_t deserialize_rsrc(const void *buf, size_t nbytes,
   
   return *errp ? 0 : used;
 }
+
+
+typedef size_t (*serialize_f)(const void *ptr, void *buf,
+			      size_t nbytes);
+
+/* variable list:  offset, memblen */
+size_t serialize(const void *ptr, void *buf, size_t nbytes,
+		 int nmemb, ...) {
+  va_list ap;
+  size_t used = 0;
+  va_start(ap, nmemb);
+
+  for (int memb = 0; memb < nmemb; ++memb) {
+    size_t memblen = va_arg(ap, size_t);
+    const void *membptr = (const void *)
+      ((const char *) ptr + memblen);
+    serialize_f serialfn = va_arg(ap, serialize_f);
+    used += serialfn(membptr, buf, sizerem(nbytes, used));
+  }
+
+  va_end(ap);
+  return used;
+}
+
+/* TODO -- serialization function for uint64_t */
