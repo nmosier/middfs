@@ -4,7 +4,7 @@ SRCS = middfs-server.c middfs-server-conn.c ../middfs-util.c ../middfs-rsrc.c ..
 HDRS = middfs-server-conn.h ../middfs-util.h ../middfs-rsrc.h ../middfs-sock.h
 OBJS = $(SRCS:.c=.o)
 BIN  = middfs-server
-CFLAGS = -c -g -Wall -pedantic -I..
+CFLAGS = -c -g -Wall -pedantic -I.. -Wno-pointer-arith # TODO: fix these warnings later
 
 # Default Running Parameters
 

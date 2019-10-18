@@ -3,7 +3,7 @@ HDRS = middfs-client.h middfs-client-ops.h middfs-client-rsrc.h ../middfs-serial
 OBJS = $(SRCS:.c=.o)
 BIN = middfs-client
 
-CFLAGS = -c `pkg-config fuse3 --cflags` -g -Wall -pedantic -I..
+CFLAGS = -c `pkg-config fuse3 --cflags` -g -Wall -pedantic -I.. -Wno-pointer-arith
 LDLIBS = `pkg-config fuse3 --libs`
 
 # Default Mount Parameters
