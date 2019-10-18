@@ -5,6 +5,8 @@
 #ifndef __MIDDFS_REQ_H
 #define __MIDDFS_REQ_H
 
+#include <stdint.h>
+
 #define MPKT_MAGIC 1800
 
 enum middfs_packet_type
@@ -46,12 +48,12 @@ struct middfs_request {
 };
 
 struct middfs_packet {
-  int32_t mpkt_magic;
+  uint32_t mpkt_magic;
   enum middfs_packet_type mpkt_type;
   union {
     struct middfs_request mpkt_request;
     // TODO -- add structs for other packet possibilities
   };
-}
+};
 
 #endif

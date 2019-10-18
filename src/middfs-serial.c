@@ -5,9 +5,14 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <stdlib.h>
 
-#include "middfs-utils.h"
+#include "middfs-util.h"
 #include "middfs-serial.h"
+#include "middfs-rsrc.h"
+#include "middfs-pkt.h"
 
 /* SERIALIZATION FUNCTIONS 
  * serialize_*:
@@ -75,7 +80,34 @@ size_t deserialize_str(const void *buf, size_t nbytes,
     len = nbytes + 1; /* indicate more bytes required */
   }
   
-  return len;
+  return len + 1;
+}
+
+size_t serialize_uint32(uint32_t uint, void *buf,
+			size_t nbytes) {
+  /* TODO: write serialize_uint deserialize_uint */
+  
+  if (sizeof(uint32_t) <= nbytes) {
+    *((uint32_t *) buf) = htonl(uint);  
+  }
+  
+  return sizeof(uint32_t);
+}
+
+size_t deserialize_uint32(const void *buf, size_t nbytes,
+			  uint32_t uint, int *errp) {
+  /* TODO: write serialize_uint deserialize_uint */
+  
+  /* bail on previous error */
+  if (*errp) {
+    return 0;
+  }
+
+  if (sizeof(uint32_t) <= nbytes) {
+    ntohl(uint);
+  }
+
+  return sizeof(uint32_t);
 }
 
 
@@ -94,7 +126,6 @@ size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
 size_t deserialize_rsrc(const void *buf, size_t nbytes,
 			struct rsrc *rsrc, int *errp) {
   size_t used = 0;
-  ssize_t rem = nbytes;
 
   /* bail on previous error */
   if (*errp) {
@@ -133,3 +164,94 @@ size_t serialize(const void *ptr, void *buf, size_t nbytes,
 }
 
 /* TODO -- serialization function for uint64_t */
+=======
+size_t serialize_request(const struct middfs_request *req, void *buf,
+			size_t nbytes) {
+  size_t used = 0;
+
+  /* TODO: write serialize_uint deserialize_uint */
+  used += serialize_uint32((uint32_t) req->mreq_type, buf + used,
+			   sizerem(nbytes, used));
+  used += serialize_str(req->mreq_requester, buf + used,
+			sizerem(nbytes, used));
+  used += serialize_rsrc(req->rsrc, buf + used,
+			   sizerem(nbytes, used));
+  
+  return used;
+}
+
+size_t deserialize_request(const void *buf, size_t nbytes,
+			   struct middfs_request *req, int *errp) {
+
+  size_t used = 0;
+
+  /* bail on previous error */
+  if (*errp) {
+    return 0;
+  }
+
+  /* TODO: write serialize_uint deserialize_uint */
+  used += deserialize_uint32(buf + used, sizerem(nbytes, used),
+			     *(uint32_t *) &req->mreq_type, errp);
+  used += deserialize_str(buf + used, sizerem(nbytes, used),
+			  &req->mreq_requester, errp);
+  used += deserialize_rsrc(buf + used, sizerem(nbytes, used),
+			   req->rsrc, errp);
+
+  return *errp ? 0 : used;
+}
+
+size_t serialize_pkg(const struct middfs_packet *pkt, void *buf,
+			size_t nbytes) {
+
+  size_t used = 0;
+  
+  used += serialize_uint32(pkt->mpkt_magic, buf + used,
+			   sizerem(nbytes, used));
+  used += serialize_uint32((uint32_t) pkt->mpkt_type, buf + used,
+			   sizerem(nbytes, used));
+  
+  switch (pkt->mpkt_type) {
+  case MPKT_REQUEST:
+    used += serialize_request(&pkt->mpkt_request, buf + used,
+			      sizerem(nbytes, used));
+  case MPKT_CONNECT:
+  case MPKT_DISCONNECT:
+  case MPKT_NONE:  
+  default:
+    abort();
+  }
+ 
+  return used;
+
+}
+
+
+size_t deserialize_pkg(const void *buf, size_t nbytes,
+		       struct middfs_packet *pkt, int *errp) {
+  size_t used = 0;
+
+  /* bail on previous error */
+  if (*errp) {
+    return 0;
+  }
+
+  used += deserialize_uint32(buf + used, sizerem(nbytes, used),
+			      pkt->mpkt_magic, errp);
+  used += deserialize_uint32(buf + used, sizerem(nbytes, used),
+			     *(uint32_t *) &pkt->mpkt_type, errp);
+  
+  switch (pkt->mpkt_type) {
+  case MPKT_REQUEST:
+    used += deserialize_request(buf + used, sizerem(nbytes, used),
+				&pkt->mpkt_request, errp);
+  case MPKT_CONNECT:
+  case MPKT_DISCONNECT:
+  case MPKT_NONE:  
+  default:
+    abort();
+  }
+
+  return *errp ? 0 : used;
+}
+
