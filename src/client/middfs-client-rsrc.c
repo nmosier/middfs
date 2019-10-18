@@ -17,23 +17,6 @@
 
 /* utility function definitions */
 
-#if 0
-/* middfs_localpath() -- get path of middfs path in local file
- * system.
- * ARGS:
- *  - middfs_path: file path in middfs space; always starts with '/'
- * RETV: malloc(3)ed pointer to corresponding local path on local 
- *       disk. Note that this must be free(3)ed.
- */
-char *middfs_localpath(const char *middfs_path) {
-  char *localpath;
-  const char *fmt = (middfs_path[0] == '/') ? "%s%s" : "%s/%s";
-  
-  asprintf(&localpath, fmt, middfs_conf.local_dir, middfs_path);
-  return localpath;
-}
-#endif
-
 char *middfs_localpath_tmp(const char *middfs_path) {
   char *localpath;
   asprintf(&localpath, "%s/%s%s", middfs_conf.local_dir,
@@ -176,8 +159,16 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-  case MR_ROOT:
     return -EOPNOTSUPP;
+    
+  case MR_ROOT: /* stat info for middfs mountpoint */
+    memset(sb, sizeof(*sb), 0); /* initialize buffer */
+
+    /* mark as directory, read-only for owner & group */
+    sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;
+    sb->st_uid = getuid(); /* owner is owner of this FUSE process */
+    sb->st_gid = getgid(); /* group is group of this FUSE process */
+    return 0;
     
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);

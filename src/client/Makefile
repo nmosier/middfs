@@ -7,7 +7,7 @@ CFLAGS = -c `pkg-config fuse3 --cflags` -g -Wall -pedantic -I.. -Wno-pointer-ari
 LDLIBS = `pkg-config fuse3 --libs`
 
 # Default Mount Parameters
-ROOT_DIR=tst
+ROOT_DIR=tst2
 CLIENT_DIR=home
 CLIENT_NAME=client
 
@@ -33,8 +33,8 @@ umount:
 
 .PHONY: attach
 attach:
-	gdb $(BIN) `pgrep middfs`
+	gdb $(BIN) `pgrep middfs-client`
 
 .PHONY: kill
 kill:
-	kill -TERM `pgrep middfs`
+	kill -KILL `pgrep middfs-client`

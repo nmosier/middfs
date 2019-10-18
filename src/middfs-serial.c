@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 #include "middfs-util.h"
 #include "middfs-serial.h"
@@ -54,6 +55,10 @@ size_t serialize_str(const char *str, void *buf, size_t nbytes) {
   }
   
   return len + 1;
+}
+
+size_t serialize_strp(const char **str, void *buf, size_t nbytes) {
+  return serialize_str(*str, buf, nbytes);
 }
 
 
@@ -110,16 +115,22 @@ size_t deserialize_uint32(const void *buf, size_t nbytes,
   return sizeof(uint32_t);
 }
 
-
 size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
-		      size_t nbytes) {
+		      size_t nbytes) { 
+#if 0
   size_t used = 0;
 
   used += serialize_str(rsrc->mr_owner, buf + used,
-			sizerem(nbytes, used));
+			 sizerem(nbytes, used));
   used += serialize_str(rsrc->mr_path, buf + used,
-			sizerem(nbytes, used));
+			 sizerem(nbytes, used));
   return used;
+#else
+  return serialize((const void *) rsrc, buf, nbytes, 2,
+		   offsetof(struct rsrc, mr_owner), serialize_strp,
+		   offsetof(struct rsrc, mr_path), serialize_strp
+		   );
+#endif
 }
 
 
@@ -156,7 +167,7 @@ size_t serialize(const void *ptr, void *buf, size_t nbytes,
     const void *membptr = (const void *)
       ((const char *) ptr + memblen);
     serialize_f serialfn = va_arg(ap, serialize_f);
-    used += serialfn(membptr, buf, sizerem(nbytes, used));
+    used += serialfn(membptr, buf + used, sizerem(nbytes, used));
   }
 
   va_end(ap);
@@ -200,7 +211,7 @@ size_t deserialize_request(const void *buf, size_t nbytes,
   return *errp ? 0 : used;
 }
 
-size_t serialize_pkg(const struct middfs_packet *pkt, void *buf,
+size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
 			size_t nbytes) {
 
   size_t used = 0;
@@ -226,7 +237,7 @@ size_t serialize_pkg(const struct middfs_packet *pkt, void *buf,
 }
 
 
-size_t deserialize_pkg(const void *buf, size_t nbytes,
+size_t deserialize_pkt(const void *buf, size_t nbytes,
 		       struct middfs_packet *pkt, int *errp) {
   size_t used = 0;
 

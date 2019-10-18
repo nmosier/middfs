@@ -11,8 +11,11 @@
 #include <errno.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <assert.h>
 
 #include "middfs-server-conn.h"
+#include "middfs-rsrc.h"
+#include "middfs-serial.h"
 
 /* server_start() -- start the server on port _port_ 
    with backlog _backlog_.
@@ -140,7 +143,12 @@ int server_loop(struct middfs_socks *socks) {
 	   */
 	  middfs_socks_remove(index, socks);
 	} else {
-	  printf("%s\n", buf);
+	  /* deserialize */
+	  struct rsrc rsrc;
+	  int err = 0;
+	  deserialize_rsrc(buf, bytes_read, &rsrc, &err);
+	  assert(!err);
+	  printf("owner=%s\npath=%s\n", rsrc.mr_owner, rsrc.mr_path);
 	}
 	// TEST //
       }
