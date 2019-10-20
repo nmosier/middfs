@@ -88,36 +88,69 @@ size_t deserialize_str(const void *buf, size_t nbytes,
   return len + 1;
 }
 
-size_t serialize_uint32(uint32_t uint, void *buf,
+size_t serialize_enum(int *enump, void *buf,
+		      size_t nbytes) {
+  if (*enump >= 256 || *enump < 0) {
+    /* enums with more than 256 items not supported */
+    abort();
+  }
+
+  /* write single byte to buffer */
+  if (nbytes >= 1) {
+    *((uint8_t *) buf) = (uint8_t) *enump;
+  }
+
+  return 1; /* require exactly 1 byte */
+}
+
+size_t deserialize_enum(const void *buf, size_t nbytes,
+			int *enump, int *errp) {
+
+  if (*errp) {
+    return 0;
+  }
+  
+  if (nbytes >= 1) {
+    *enump = *((uint8_t *) buf);
+  }
+
+  return 1; /* require exactly 1 byte */
+}
+
+size_t serialize_uint32(const uint32_t *uint, void *buf,
 			size_t nbytes) {
   /* TODO: write serialize_uint deserialize_uint */
   
   if (sizeof(uint32_t) <= nbytes) {
-    *((uint32_t *) buf) = htonl(uint);  
+    *((uint32_t *) buf) = htonl(*uint);  
   }
   
   return sizeof(uint32_t);
 }
 
 size_t deserialize_uint32(const void *buf, size_t nbytes,
-			  uint32_t uint, int *errp) {
-  /* TODO: write serialize_uint deserialize_uint */
-  
+			  uint32_t *uint, int *errp) {
   /* bail on previous error */
   if (*errp) {
     return 0;
   }
 
   if (sizeof(uint32_t) <= nbytes) {
-    ntohl(uint);
+    *uint = ntohl(*((const uint32_t *) buf));
   }
-
+  
   return sizeof(uint32_t);
 }
 
 size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
 		      size_t nbytes) { 
-#if 0
+#if USE_GENERIC_SERIALIZE
+  return serialize((const void *) rsrc, buf, nbytes, 2,
+		   offsetof(struct rsrc, mr_owner), serialize_strp,
+		   offsetof(struct rsrc, mr_path), serialize_strp
+		   );
+#else
+  /* this is how the generic serialize() should be used */
   size_t used = 0;
 
   used += serialize_str(rsrc->mr_owner, buf + used,
@@ -125,11 +158,6 @@ size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
   used += serialize_str(rsrc->mr_path, buf + used,
 			 sizerem(nbytes, used));
   return used;
-#else
-  return serialize((const void *) rsrc, buf, nbytes, 2,
-		   offsetof(struct rsrc, mr_owner), serialize_strp,
-		   offsetof(struct rsrc, mr_path), serialize_strp
-		   );
 #endif
 }
 
@@ -151,9 +179,6 @@ size_t deserialize_rsrc(const void *buf, size_t nbytes,
   return *errp ? 0 : used;
 }
 
-
-typedef size_t (*serialize_f)(const void *ptr, void *buf,
-			      size_t nbytes);
 
 /* variable list:  offset, memblen */
 size_t serialize(const void *ptr, void *buf, size_t nbytes,
@@ -180,7 +205,7 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   size_t used = 0;
 
   /* TODO: write serialize_uint deserialize_uint */
-  used += serialize_uint32((uint32_t) req->mreq_type, buf + used,
+  used += serialize_enum((int *) &req->mreq_type, buf + used,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf + used,
 			sizerem(nbytes, used));
@@ -202,7 +227,7 @@ size_t deserialize_request(const void *buf, size_t nbytes,
 
   /* TODO: write serialize_uint deserialize_uint */
   used += deserialize_uint32(buf + used, sizerem(nbytes, used),
-			     *(uint32_t *) &req->mreq_type, errp);
+			     (uint32_t *) &req->mreq_type, errp);
   used += deserialize_str(buf + used, sizerem(nbytes, used),
 			  &req->mreq_requester, errp);
   used += deserialize_rsrc(buf + used, sizerem(nbytes, used),
@@ -216,9 +241,9 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
 
   size_t used = 0;
   
-  used += serialize_uint32(pkt->mpkt_magic, buf + used,
+  used += serialize_uint32(&pkt->mpkt_magic, buf + used,
 			   sizerem(nbytes, used));
-  used += serialize_uint32((uint32_t) pkt->mpkt_type, buf + used,
+  used += serialize_enum((int *) &pkt->mpkt_type, buf + used,
 			   sizerem(nbytes, used));
   
   switch (pkt->mpkt_type) {
@@ -247,9 +272,9 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   }
 
   used += deserialize_uint32(buf + used, sizerem(nbytes, used),
-			      pkt->mpkt_magic, errp);
+			     &pkt->mpkt_magic, errp);
   used += deserialize_uint32(buf + used, sizerem(nbytes, used),
-			     *(uint32_t *) &pkt->mpkt_type, errp);
+			     (uint32_t *) &pkt->mpkt_type, errp);
   
   switch (pkt->mpkt_type) {
   case MPKT_REQUEST:
@@ -265,3 +290,21 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   return *errp ? 0 : used;
 }
 
+
+
+size_t serialize_uint64(const uint64_t *uint, void *buf,
+			size_t nbytes) {
+  /* serialize top 4 bytes, then serialize bottom 4 bytes */
+  size_t used = 0;
+  uint32_t uint1, uint2;
+  uint1 = *uint >> 32;
+  uint2 = *uint & 0xffffffff;
+  
+  used += serialize_uint32(&uint1, buf + used,
+			   sizerem(nbytes, used));
+  used += serialize_uint32(&uint2, buf + used,
+			   sizerem(nbytes, used));
+  
+  return used;
+}
+		    

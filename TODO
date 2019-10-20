@@ -8,6 +8,7 @@ DONE
 [X] Rewrite file ops to use middfs_rsrc as file handle.
 
 TODO
+[ ] Write serializaiton testing suite.
 [ ] Transition middfs-client-rsrc.[ch] to being shared code
     [ ] Embed middfs_rsrc struct in middfs_request struct
 [ ] Write serialization functions

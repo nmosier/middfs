@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 
 /* sizerem() -- get remaining size given total size and used size.
@@ -13,3 +14,4 @@
 size_t sizerem(size_t nbytes, size_t used) {
   return nbytes >= used ? nbytes - used : 0;
 }
+

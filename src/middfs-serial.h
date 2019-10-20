@@ -10,6 +10,15 @@
 #include "middfs-rsrc.h"
 #include "middfs-pkt.h"
 
+#define USE_GENERIC_SERIALIZE 1
+
+typedef size_t (*serialize_f)(const void *ptr, void *buf,
+			      size_t nbytes);
+
+
+size_t serialize(const void *ptr, void *buf, size_t nbytes,
+		 int nmemb, ...);
+
 size_t serialize_str(const char *str, void *buf, size_t nbytes);
 size_t serialize_strp(const char **str, void *buf, size_t nbytes);
 
@@ -22,11 +31,11 @@ size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
 size_t deserialize_rsrc(const void *buf, size_t nbytes,
 			struct rsrc *rsrc, int *errp);
 
-size_t serialize_uint32(uint32_t uint, void *buf,
+size_t serialize_uint32(const uint32_t *uint, void *buf,
 			size_t nbytes);
 
 size_t deserialize_uint32(const void *buf, size_t nbytes,
-			  uint32_t uint, int *errp);
+			  uint32_t *uint, int *errp);
 
 size_t serialize_request(const struct middfs_request *req, void *buf,
 			 size_t nbytes);
@@ -40,8 +49,11 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
 size_t deserialize_pkt(const void *buf, size_t nbytes,
 		       struct middfs_packet *pkt, int *errp);
 
-size_t serialize(const void *ptr, void *buf, size_t nbytes,
-		 int nmemb, ...);
+size_t serialize_enum(int *e, void *buf,
+		      size_t nbytes);
+
+size_t deserialize_enum(const void *buf, size_t nbytes,
+			int *enump, int *errp);
 
 
 #endif

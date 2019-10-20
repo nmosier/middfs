@@ -1,4 +1,4 @@
-/* middfs-req.h -- shared structure for middfs requests
+/* middfs-pkt.h -- shared structure for middfs requests
  * Nicholas Mosier & Tommaso Monaco 2019
  */
 
