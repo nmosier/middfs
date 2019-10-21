@@ -16,4 +16,7 @@ struct rsrc {
   char *mr_path;
 };
 
+void print_rsrc(const struct rsrc *rsrc);
+
+
 #endif

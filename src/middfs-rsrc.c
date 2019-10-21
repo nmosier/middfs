@@ -4,6 +4,12 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "middfs-util.h"
 #include "middfs-rsrc.h"
+
+void print_rsrc(const struct rsrc *rsrc) {
+  printf("rsrc @ %p: {.mr_owner = %s, .mr_path = %s}\n",
+	 (void *) rsrc, rsrc->mr_owner, rsrc->mr_path);
+}
