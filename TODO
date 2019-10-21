@@ -6,16 +6,12 @@ DONE
 [X] Do not mount mirror by default.
 [X] Specify user directory name as command-line argument.
 [X] Rewrite file ops to use middfs_rsrc as file handle.
+[X] Transition middfs-client-rsrc.[ch] to being shared code
+    [X] Embed middfs_rsrc struct in middfs_request struct
+[X] Write serialization functions
 
 TODO
 [ ] Write serializaiton testing suite.
-[ ] Transition middfs-client-rsrc.[ch] to being shared code
-    [ ] Embed middfs_rsrc struct in middfs_request struct
-[ ] Write serialization functions
-    [ ] string serialization utility function
-    [ ] middfs_rsrc
-    [ ] middfs_request
-    [ ] middfs_packet
 
 
 client dir (static, local) vs. client name (determined by server

@@ -108,10 +108,6 @@ int middfs_socks_add(int sockfd,
   socks->sockinfos[socks->count] = *sockinfo;
   ++socks->count;
 
-  if (sockfd >= 0) {
-    ++socks->nopen;
-  }
-
   return 0;
 }
 

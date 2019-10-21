@@ -7,6 +7,8 @@
 
 #include <poll.h>
 
+#include "middfs-util.h"
+
 /* middfs_fd_e -- enum describing type of socket */
 enum middfs_socktype
   {MFD_NONE, /* None */
@@ -20,10 +22,9 @@ enum middfs_socktype
  * for future extendability. */
 struct middfs_sockinfo {
   enum middfs_socktype type;
-  /* Might need to add:
-   *  - buffer pointer for incoming data
-   *  - buffer pointer for outgoing data
-   */
+
+  struct buffer buf_in;  /* buffer for incoming data */
+  struct buffer buf_out; /* buffer for outgoing data */
 };
 
 struct middfs_socks {
@@ -31,7 +32,6 @@ struct middfs_socks {
   struct middfs_sockinfo *sockinfos;
   nfds_t count;
   nfds_t len;
-  nfds_t nopen; /* TODO: Delete this -- not used. */
 };
 
 int middfs_sockinfo_init(enum middfs_socktype type,

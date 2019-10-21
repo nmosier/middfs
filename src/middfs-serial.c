@@ -44,6 +44,150 @@
  *       (Note that 1. and 2. do NOT describe the same values).
  */
 
+
+/* serialize_union() -- serialize a union with base address
+ *   _ptr_ into buffer _buf_.
+ * ARGS:
+ *  - ptr: base addresss of union
+ *  - e: enum value to switch on
+ *  - buf: pointer to serialization buffer
+ *  - nbytes: the max number of bytes that should be written to
+ *            _buf_
+ *  - nmemb: the number of members in the union
+ * VARARGS: There should be _nmemb_ triplets of varargs. Each triplet
+ *          consists of the following:
+ *  1. The offset of the member in the union.
+ *  2. The enum value, passed in _e_, corresponding to this member.
+ *  3. The serialization function for this member.
+ */
+
+
+/* variable list:  offset, memblen */
+size_t serialize_struct(const void *ptr, void *buf, size_t nbytes,
+			int nmemb, ...) {
+  uint8_t *buf_ = (uint8_t *) buf;
+  va_list ap;
+  size_t used = 0;
+  va_start(ap, nmemb);
+
+  for (int memb = 0; memb < nmemb; ++memb) {
+    size_t memblen = va_arg(ap, size_t);
+    const void *membptr = (const void *)
+      ((const char *) ptr + memblen);
+    serialize_f serialfn = va_arg(ap, serialize_f);
+    used += serialfn(membptr, buf_ + used, sizerem(nbytes, used));
+  }
+
+  va_end(ap);
+  return used;
+}
+
+
+
+size_t deserialize_struct(const void *buf, size_t nbytes, void *ptr,
+			  int *errp, int nmemb, ...) {
+  const uint8_t *buf_ = (const uint8_t *) buf;
+  uint8_t *ptr_ = (uint8_t *) ptr;
+  va_list ap;
+  size_t used = 0;
+
+  /* check for previous error */
+  if (*errp) {
+    return 0;
+  }
+  
+  va_start(ap, nmemb);
+
+  for (int i = 0; i < nmemb; ++i) {
+    size_t memboff = va_arg(ap, size_t);
+    uint8_t *membptr = ptr_ + memboff;
+    deserialize_f deserialfn = va_arg(ap, deserialize_f);
+    used += deserialfn(buf_ + used, sizerem(nbytes, used),
+		       membptr, errp);
+  }
+
+  va_end(ap);
+  return used;
+}
+
+
+size_t serialize_union(const void *ptr, int e, void *buf,
+		       size_t nbytes, int nmemb, ...) {
+  const uint8_t *ptr_ = (const uint8_t *) ptr;
+  va_list ap;
+
+  va_start(ap, nmemb);
+
+  for (int i = 0; i < nmemb; ++i) {
+    size_t memboff = va_arg(ap, size_t);
+    int membenum = va_arg(ap, int);
+    serialize_f serialfn = va_arg(ap, serialize_f);
+
+    if (membenum == e) {
+      /* serialize this member */
+      const uint8_t *membptr = ptr_ + memboff;
+      return serialfn(membptr, buf, nbytes);
+    }
+  }
+
+  /* no member matched this enum, so don't serialize anything */
+  return 0;
+}
+
+size_t deserialize_union(const void *buf, size_t nbytes, void *ptr,
+			 int e, int *errp, int nmemb, ...) {
+  uint8_t *ptr_ = (uint8_t *) ptr;
+  va_list ap;
+  
+  va_start(ap, nmemb);
+
+  for (int i = 0; i < nmemb; ++i) {
+    size_t memboff = va_arg(ap, size_t);
+    int membenum = va_arg(ap, int);
+    deserialize_f deserialfn = va_arg(ap, deserialize_f);
+
+    if (membenum == e) {
+      /* deserialize this member */
+      uint8_t *membptr = ptr_ + memboff;
+      return deserialfn(buf, nbytes, membptr, errp);
+    }
+  }
+
+  /* no member matched this enum, so don't deserialize anything */
+  return 0;
+}
+
+
+size_t serialize_enum(int *enump, void *buf,
+		      size_t nbytes) {
+  if (*enump >= 256 || *enump < 0) {
+    /* enums with more than 256 items not supported */
+    abort();
+  }
+
+  /* write single byte to buffer */
+  if (nbytes >= 1) {
+    *((uint8_t *) buf) = (uint8_t) *enump;
+  }
+
+  return 1; /* require exactly 1 byte */
+}
+
+size_t deserialize_enum(const void *buf, size_t nbytes,
+			int *enump, int *errp) {
+
+  if (*errp) {
+    return 0;
+  }
+  
+  if (nbytes >= 1) {
+    *enump = *((uint8_t *) buf);
+  }
+
+  return 1; /* require exactly 1 byte */
+}
+
+
 size_t serialize_str(const char *str, void *buf, size_t nbytes) {
   size_t len;
   
@@ -56,6 +200,7 @@ size_t serialize_str(const char *str, void *buf, size_t nbytes) {
   
   return len + 1;
 }
+
 
 size_t serialize_strp(const char **str, void *buf, size_t nbytes) {
   return serialize_str(*str, buf, nbytes);
@@ -89,35 +234,6 @@ size_t deserialize_str(const void *buf, size_t nbytes,
   return len + 1;
 }
 
-size_t serialize_enum(int *enump, void *buf,
-		      size_t nbytes) {
-  if (*enump >= 256 || *enump < 0) {
-    /* enums with more than 256 items not supported */
-    abort();
-  }
-
-  /* write single byte to buffer */
-  if (nbytes >= 1) {
-    *((uint8_t *) buf) = (uint8_t) *enump;
-  }
-
-  return 1; /* require exactly 1 byte */
-}
-
-size_t deserialize_enum(const void *buf, size_t nbytes,
-			int *enump, int *errp) {
-
-  if (*errp) {
-    return 0;
-  }
-  
-  if (nbytes >= 1) {
-    *enump = *((uint8_t *) buf);
-  }
-
-  return 1; /* require exactly 1 byte */
-}
-
 size_t serialize_uint32(const uint32_t *uint, void *buf,
 			size_t nbytes) {
   /* TODO: write serialize_uint deserialize_uint */
@@ -145,26 +261,32 @@ size_t deserialize_uint32(const void *buf, size_t nbytes,
 
 size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
 		      size_t nbytes) { 
-#if USE_GENERIC_SERIALIZE
-  return serialize((const void *) rsrc, buf, nbytes, 2,
-		   offsetof(struct rsrc, mr_owner), serialize_strp,
-		   offsetof(struct rsrc, mr_path), serialize_strp
-		   );
-#else
-  /* this is how the generic serialize() should be used */
-  size_t used = 0;
-
-  used += serialize_str(rsrc->mr_owner, buf + used,
-			 sizerem(nbytes, used));
-  used += serialize_str(rsrc->mr_path, buf + used,
-			 sizerem(nbytes, used));
-  return used;
-#endif
+  return
+    serialize_struct((const void *) rsrc, buf, nbytes, 2,
+		     offsetof(struct rsrc, mr_owner), serialize_strp,
+		     offsetof(struct rsrc, mr_path), serialize_strp
+		     );
 }
 
 
 size_t deserialize_rsrc(const void *buf, size_t nbytes,
 			struct rsrc *rsrc, int *errp) {
+
+#if 1
+
+  return
+    deserialize_struct(buf, nbytes, rsrc, errp, 2,
+		       offsetof(struct rsrc,
+				mr_owner), deserialize_str,
+		       offsetof(struct rsrc,
+				mr_path), deserialize_str
+		       );
+		       
+			    
+
+  
+#else
+  
   const uint8_t *buf_ = (const void *) buf;
   size_t used = 0;
   
@@ -179,28 +301,12 @@ size_t deserialize_rsrc(const void *buf, size_t nbytes,
 			  &rsrc->mr_path, errp);
   
   return *errp ? 0 : used;
+
+#endif
 }
 
+		   
 
-/* variable list:  offset, memblen */
-size_t serialize(const void *ptr, void *buf, size_t nbytes,
-		 int nmemb, ...) {
-  uint8_t *buf_ = (uint8_t *) buf;
-  va_list ap;
-  size_t used = 0;
-  va_start(ap, nmemb);
-
-  for (int memb = 0; memb < nmemb; ++memb) {
-    size_t memblen = va_arg(ap, size_t);
-    const void *membptr = (const void *)
-      ((const char *) ptr + memblen);
-    serialize_f serialfn = va_arg(ap, serialize_f);
-    used += serialfn(membptr, buf_ + used, sizerem(nbytes, used));
-  }
-
-  va_end(ap);
-  return used;
-}
 
 /* TODO -- serialization function for uint64_t */
 size_t serialize_request(const struct middfs_request *req, void *buf,
@@ -314,4 +420,4 @@ size_t serialize_uint64(const uint64_t *uint, void *buf,
   
   return used;
 }
-		    
+
