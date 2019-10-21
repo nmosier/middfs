@@ -44,7 +44,7 @@ struct middfs_request {
   
   char *mreq_requester;
 
-  struct rsrc *rsrc;
+  struct rsrc rsrc;
 };
 
 struct middfs_packet {
