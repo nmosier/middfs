@@ -69,33 +69,6 @@ int main(int argc, char *argv[]) {
 
   /* call server loop */
   while (server_loop(&socks) >= 0) {}
-
-#if 0
-
-  int clientfd = -1;
-  if ((clientfd = server_accept(servfd)) < 0) {
-    return 3;
-  }
-
-  
-  printf("client fd = %d\n", clientfd);
-
-  char rsrc_buff[64*sizeof(char)];
-  struct rsrc rsrc;
-  int errp = 0;
-  ssize_t nbytes;
-
-  /* read bytes into buffer */
-  if ((nbytes = read(clientfd, rsrc_buff, 64)) < 0) {
-    perror("read");
-  }
-  
-  /* test resource */
-  deserialize_rsrc(rsrc_buff, (size_t) nbytes, &rsrc, &errp);
-
-  printf("client's name is %s\n", rsrc.mr_owner);
-  printf("client's file path %s\n", rsrc.mr_path);
-#endif  
   
  cleanup:
   if (middfs_socks_delete(&socks) < 0) {
