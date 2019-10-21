@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "middfs-util.h"
 
@@ -19,6 +20,10 @@ size_t sizerem(size_t nbytes, size_t used) {
 
 size_t smin(size_t s1, size_t s2) {
   return (s1 < s2) ? s1 : s2;
+}
+
+size_t smax(size_t s1, size_t s2) {
+  return (s1 < s2) ? s2 : s1;
 }
 
 /* Buffer Functions */
@@ -75,4 +80,42 @@ void buffer_shift(struct buffer *buf, size_t shift) {
     
     buf->ptr = (uint8_t *) buf->begin + newused;
   }
+}
+
+void buffer_init(struct buffer *buf) {
+  memset(buf, 0, sizeof(*buf));
+}
+
+/* buffer_increase() -- make sure there is free space in the buffer 
+ *                    so data can be added */
+int buffer_increase(struct buffer *buf) {
+  size_t rem = buffer_rem(buf);
+
+  if (rem == 0) {
+    size_t size = buffer_size(buf);
+    size_t newsize = smax(1, size * 2);
+    
+    return buffer_resize(buf, newsize);
+    
+  } else {
+    return 0;
+  }
+}
+
+void buffer_delete(struct buffer *buf) {
+  free(buf->begin);
+}
+
+int buffer_isempty(const struct buffer *buf) {
+  return buffer_used(buf) == 0;
+}
+
+void buffer_advance(struct buffer *buf, size_t nbytes) {
+  size_t rem = buffer_rem(buf);
+
+  /* check bounds */
+  assert(rem >= nbytes);
+
+  /* update buffer pointer */
+  buf->ptr = (uint8_t *) buf->ptr + nbytes;
 }
