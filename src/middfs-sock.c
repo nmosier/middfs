@@ -20,7 +20,7 @@
  * RETV: 0 on success; -1 on error
  */
 int middfs_socks_init(struct middfs_socks *socks) {
-  memset(socks, sizeof(*socks), 0);
+  memset(socks, 0, sizeof(*socks));
   return 0;
 }
 
@@ -185,10 +185,15 @@ int middfs_socks_pack(struct middfs_socks *socks) {
 int middfs_sockinfo_init(enum middfs_socktype type,
 			 struct middfs_sockinfo *info) {
   info->type = type;
+  buffer_init(&info->buf_in);
+  buffer_init(&info->buf_out);
+  
   return 0;
 }
 
 int middfs_sockinfo_delete(struct middfs_sockinfo *info) {
   info->type = MFD_NONE;
+  buffer_delete(&info->buf_in);
+  buffer_delete(&info->buf_out);
   return 0;
 }
