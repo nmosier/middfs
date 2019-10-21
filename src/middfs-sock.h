@@ -7,7 +7,7 @@
 
 #include <poll.h>
 
-#include "middfs-util.h"
+#include "middfs-buf.h"
 
 /* middfs_fd_e -- enum describing type of socket */
 enum middfs_socktype

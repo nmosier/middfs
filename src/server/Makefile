@@ -1,7 +1,7 @@
 # middfs-server Makefile
 
-SRCS = middfs-server.c middfs-server-conn.c ../middfs-util.c ../middfs-rsrc.c ../middfs-sock.c ../middfs-serial.c
-HDRS = middfs-server-conn.h ../middfs-util.h ../middfs-rsrc.h ../middfs-sock.h
+SRCS = middfs-server.c middfs-server-conn.c ../middfs-util.c ../middfs-rsrc.c ../middfs-sock.c ../middfs-serial.c ../middfs-buf.c
+HDRS = middfs-server-conn.h ../middfs-util.h ../middfs-rsrc.h ../middfs-sock.h ../middfs-buf.h
 OBJS = $(SRCS:.c=.o)
 BIN  = middfs-server
 CFLAGS = -c -g -Wall -pedantic -I.. -Wno-pointer-arith # TODO: fix these warnings later
