@@ -111,6 +111,7 @@ int server_loop(struct middfs_socks *socks) {
   for (int index = 0; index < socks->count; ++index) {
     int revents = socks->pollfds[index].revents;
     int fd = socks->pollfds[index].fd;
+    struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
     /* remove socket if error occurred */
     if (revents & (POLLERR | POLLHUP)) {
@@ -122,9 +123,65 @@ int server_loop(struct middfs_socks *socks) {
     }
 
     int client_sockfd; /* for MFD_LSTN */
-    switch (socks->sockinfos[index].type) {
+    switch (sockinfo->type) {
     case MFD_CREQ:
       if (revents & POLLIN) {
+#if 1
+	struct buffer *buf_in = &sockinfo->buf_in;
+	
+	/* prepare for writing */
+	if (buffer_increase(buf_in) < 0) {
+	  perror("buffer_increase");
+	  abort(); /* TODO */
+	};
+
+	size_t rem = buffer_rem(buf_in);
+	ssize_t bytes_read = 0;
+
+	if ((bytes_read = read(fd, buf_in->ptr, rem))  < 0) {
+	  perror("read");
+	  abort(); /* TODO */
+	} else if (bytes_read == 0) {
+	  middfs_socks_remove(index, socks);
+	} else {
+	  /* update buffer pointers */
+	  buffer_advance(buf_in, bytes_read);
+
+	  /* try to deserialize buffer */
+	  /* TODO: this should be handled by package handler. */
+	  struct rsrc rsrc;
+	  int errp = 0;
+	  size_t bytes_ready = buffer_used(buf_in);
+	  size_t bytes_required = deserialize_rsrc(buf_in->begin,
+						   bytes_ready, &rsrc,
+						   &errp);
+	  
+	  if (errp) {
+	    /* invalid data; close socket */
+	    middfs_socks_remove(index, socks);
+	    
+	  } else {
+	    if (bytes_required <= bytes_ready) {
+	      /* successfully deserialized packet */
+	      print_rsrc(&rsrc);
+	      
+	      
+	      /* remove used bytes */
+	      buffer_shift(buf_in, bytes_required);
+
+	      /* TODO: leave socket open for response. */
+	      middfs_socks_remove(index, socks);
+	      
+	    } else {
+	      /* read more bytes */
+	      /* TODO: Make sure pollfd event POLLIN is set */
+	    }
+	  }
+	  
+	}
+	
+	
+#else	
 	// TEST //
 	int bytes_read;
 	char buf[64];
@@ -151,7 +208,9 @@ int server_loop(struct middfs_socks *socks) {
 	  printf("owner=%s\npath=%s\n", rsrc.mr_owner, rsrc.mr_path);
 	}
 	// TEST //
+#endif
       }
+
       break;
       
     case MFD_SREQ:

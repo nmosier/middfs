@@ -418,8 +418,13 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
   if ((bytes = serialize_rsrc(rsrc, buf, 64)) > 64) {
     fprintf(stderr, "too many bytes\n");
   }
-  if (send(sockfd, buf, bytes, 0) < bytes) {
-    fprintf(stderr, "send failed");
+
+  if (send(sockfd, buf, 1, 0) < 1) {
+    perror("send");
+  }
+  sleep(1); /* wait 1 second */
+  if (send(sockfd, buf + 1, bytes - 1, 0) < bytes - 1) {
+    perror("send");
   }
   close(sockfd);
   
