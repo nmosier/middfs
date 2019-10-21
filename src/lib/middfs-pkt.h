@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "middfs-rsrc.h"
+
 #define MPKT_MAGIC 1800
 
 enum middfs_packet_type

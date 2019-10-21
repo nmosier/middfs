@@ -1,21 +1,36 @@
-LIB_NAME = middfs-lib.a
 LIB_DIR = lib
-LIB = $(realpath $(LIB_DIR)/$(LIB_NAME))
+SERVER_DIR = server
+CLIENT_DIR = client
 
+LIB_NAME = middfs-lib.a
+SERVER_NAME = middfs-server
+CLIENT_NAME = middfs-client
+
+LIB = $(realpath $(LIB_DIR))/$(LIB_NAME)
+SERVER = $(realpath $(SERVER_DIR))/$(SERVER_NAME)
+CLIENT = $(realpath $(CLIENT_DIR))/$(CLIENT_NAME)
+BINS = $(SERVER) $(CLIENT)
+
+export CFLAGS = -c -Wall -pedantic -I $(realpath $(LIB_DIR))
+export LDLIBS = $(LIB)
 
 .PHONY: all
-all: server/middfs-server client/middfs-client
-
-server/middfs-server: server/Makefile
-	cd server && $(MAKE) middfs-server
-
-client/middfs-client: client/Makefile
-	cd client && $(MAKE) middfs-client
-
+all: $(BINS)
 
 .PHONY: lib
 lib: $(LIB)
 
-$(LIB):
-	cd $(LIB_DIR) && $(MAKE) $@
+.PHONY: server
+server: $(SERVER)
 
+.PHONY: client
+client: $(CLIENT)
+
+$(LIB):
+	cd $(LIB_DIR) && $(MAKE) LIB=$(LIB) $@
+
+$(SERVER): $(LIB)
+	cd $(SERVER_DIR) && $(MAKE) BIN=$(SERVER) $@
+
+$(CLIENT): $(LIB)
+	cd $(CLIENT_DIR) && $(MAKE) BIN=$(CLIENT) $@
