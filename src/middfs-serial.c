@@ -319,8 +319,8 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf_ + used,
 			sizerem(nbytes, used));
-  used += serialize_rsrc(req->rsrc, buf_ + used,
-			   sizerem(nbytes, used));
+  used += serialize_rsrc(&req->rsrc, buf_ + used,
+			 sizerem(nbytes, used));
   
   return used;
 }
@@ -341,7 +341,7 @@ size_t deserialize_request(const void *buf, size_t nbytes,
   used += deserialize_str(buf_ + used, sizerem(nbytes, used),
 			  &req->mreq_requester, errp);
   used += deserialize_rsrc(buf_ + used, sizerem(nbytes, used),
-			   req->rsrc, errp);
+			   &req->rsrc, errp);
 
   return *errp ? 0 : used;
 }
