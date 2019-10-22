@@ -56,3 +56,11 @@ htonl(3) -- convert host endianness to network endianness
 (also see byteorder(9))
 
 About structuring data sent over the network: https://stackoverflow.com/questions/1577161/passing-a-structure-through-sockets-in-c
+
+
+
+Brainstorming
+
+There needs to be a way to associate entries in the socks[] list --
+for example, when a server has to make a request to another client,
+it needs to associate that with the response.

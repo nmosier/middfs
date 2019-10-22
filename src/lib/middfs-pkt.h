@@ -1,4 +1,4 @@
-/* middfs-pkt.h -- shared structure for middfs requests
+/* middfs-pkt.h -- middfs packet handler
  * Nicholas Mosier & Tommaso Monaco 2019
  */
 
@@ -16,6 +16,7 @@ enum middfs_packet_type
    MPKT_CONNECT,
    MPKT_DISCONNECT,
    MPKT_REQUEST,
+   MPKT_NTYPES /* counts number of types */
   };
 
 enum middfs_request_type
@@ -49,13 +50,31 @@ struct middfs_request {
   struct rsrc rsrc;
 };
 
+struct middfs_connect {
+  /* TODO: stub */
+};
+
+struct middfs_disconnect {
+  /* TODO: stub */
+};
+
 struct middfs_packet {
   uint32_t mpkt_magic;
   enum middfs_packet_type mpkt_type;
   union {
     struct middfs_request mpkt_request;
+    struct middfs_connect mpkt_connect;
+    struct middfs_disconnect mpk_disconnect;
     // TODO -- add structs for other packet possibilities
-  };
+  } mpkt_un;
 };
+
+typedef int (*packet_handle_f)(struct middfs_packet *pkt);
+
+int packet_handle_none(struct middfs_packet *pkt);
+int packet_handle_connect(struct middfs_packet *pkt);
+int packet_handle_disconnect(struct middfs_packet *pkt);
+int packet_handle_request(struct middfs_packet *pkt);
+
 
 #endif

@@ -102,7 +102,7 @@ int server_accept(int servfd) {
 int server_loop(struct middfs_socks *socks) {
   int retv = 0;
 
-  int readyfds = poll(socks->pollfds, socks->count, INFTIM);
+  int readyfds = poll(socks->pollfds, socks->count, -1);
   if (readyfds < 0) {
     perror("server_loop: poll");
     return -1;
