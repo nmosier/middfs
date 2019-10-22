@@ -8,7 +8,7 @@
 #include <limits.h>
 
 #include "middfs-sock.h"
-#include "middfs-server-conn.h"
+#include "middfs-conn.h"
 #include "middfs-rsrc.h"
 #include "middfs-util.h"
 

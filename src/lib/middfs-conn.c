@@ -13,7 +13,7 @@
 #include <netinet/in.h>
 #include <assert.h>
 
-#include "middfs-server-conn.h"
+#include "middfs-conn.h"
 #include "middfs-rsrc.h"
 #include "middfs-serial.h"
 
@@ -126,7 +126,6 @@ int server_loop(struct middfs_socks *socks) {
     switch (sockinfo->type) {
     case MFD_CREQ:
       if (revents & POLLIN) {
-#if 1
 	struct buffer *buf_in = &sockinfo->buf_in;
 	
 	/* prepare for writing */
@@ -179,36 +178,6 @@ int server_loop(struct middfs_socks *socks) {
 	  }
 	  
 	}
-	
-	
-#else	
-	// TEST //
-	int bytes_read;
-	char buf[64];
-	
-	bytes_read = read(fd, buf, 64);
-
-	if (bytes_read < 0) {
-	  /* read error */
-	  perror("read");
-	} else if (bytes_read == 0) {
-	  /* EOF, so remove client from list 
-	   * TODO: might need to throw error or parse/deserialize
-	   * any data that has already been read
-	   * But for now, just remove the client socket from the 
-	   * socket list.
-	   */
-	  middfs_socks_remove(index, socks);
-	} else {
-	  /* deserialize */
-	  struct rsrc rsrc;
-	  int err = 0;
-	  deserialize_rsrc(buf, bytes_read, &rsrc, &err);
-	  assert(!err);
-	  printf("owner=%s\npath=%s\n", rsrc.mr_owner, rsrc.mr_path);
-	}
-	// TEST //
-#endif
       }
 
       break;
@@ -244,108 +213,3 @@ int server_loop(struct middfs_socks *socks) {
    * sockets -- if this ever reaches 0, then the server should shut
    * down. */
 }
-
-
-#if 0
-/* server_loop()
- * DESC: repeatedly poll(2)'s server socket for new connections to accept and client sockets
- *       for (i) more request data to receive and then (ii) more response data to send. Returns
- *       once server_accepting is 0 and all requests have been serviced.
- * ARGS:
- *  - servfd: server socket file descriptor.
- *  - ftypes: pointer to content type table.
- * RETV: 0 upon success, -1 upon error.
- * NOTE: prints errors.
- */
-int server_loop(int servfd) {
-  middfs_socks socks;
-   int retv = 0;
-   int shutdwn = 0;
-
-   /* intialize variables */
-   retv = 0;
-   shutdwn = 0;
-   httpfds_init(&hfds);
-   
-   /* insert server socket to list */
-   if (httpfds_insert(servfd, POLLIN, &hfds) < 0) {
-      perror("httpfds_insert");
-      if (httpfds_delete(&hfds) < 0) {
-         perror("httpfds_delete");
-      }
-      return -1;
-   }
-
-   /* service clients as long as sockets open & fatal error hasn't occurred */
-   while (retv >= 0 && (server_accepting || hfds.nopen > 1)) {
-      int nready;
-
-      /* if no longer accepting, stop reading */
-      if (!server_accepting && !shutdwn) {
-         if (shutdown(servfd, SHUT_RD) < 0) {
-            perror("shutdown");
-            if (httpfds_delete(&hfds) < 0) {
-               perror("httpfds_delete");
-            }
-            return -1;
-         }
-         shutdwn = 1;
-      }
-      
-      /* poll for new connections / reading requests / sending responses */
-      if ((nready = poll(hfds.fds, hfds.count, -1)) < 0) {
-         if (errno != EINTR) {
-            perror("poll");
-            if (httpfds_delete(&hfds) < 0) {
-               perror("httpfds_delete");
-            }
-            return -1;
-         }
-         continue;
-      }
-   
-      if (DEBUG) {
-         fprintf(stderr, "poll: %d descriptors ready\n", nready);
-      }
-      
-      for (size_t i = 0; nready > 0; ++i) {
-         int fd;
-         int revents;
-         
-         fd = hfds.fds[i].fd;
-         revents = hfds.fds[i].revents;
-         if (fd >= 0 && revents) {
-            if (fd == servfd) {
-               if (handle_pollevents_server(fd, revents, &hfds) < 0) {
-                  fprintf(stderr, "server_loop: server socket error\n");
-                  if (httpfds_delete(&hfds) < 0) {
-                     perror("httpfds_delete");
-                  }
-                  return -1;
-               }
-            } else {
-               if (handle_pollevents_client(fd, i, revents, &hfds, ftypes) < 0) {
-                  return -1;
-               }
-            }
-            
-            --nready;
-         }
-         
-      }
-
-      /* pack httpfds in case some connections were closed */
-      httpfds_pack(&hfds);
-   }
-
-   /* remove (& close) all client sockets */
-   hfds.fds[0].fd = -1; // don't want to close server socket
-   if (httpfds_delete(&hfds) < 0) {
-      perror("httpfds_delete");
-      retv = -1;
-   }
-
-   return retv;
-}
-
-#endif
