@@ -15,7 +15,7 @@ CLIENT_NAME=client
 # TODO -- C header file dependencies
 
 $(BIN): $(OBJS)
-	$(CC) $(LDLIBS) -o $@ $^
+	$(CC) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -o $@ $<

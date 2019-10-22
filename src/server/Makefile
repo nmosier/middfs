@@ -8,7 +8,7 @@ BIN  = middfs-server
 # Default Running Parameters
 
 $(BIN): $(OBJS)
-	$(CC) -o $@ $(LDLIBS) $^
+	$(CC) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -o $@ $<
