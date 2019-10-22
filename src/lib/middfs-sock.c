@@ -62,7 +62,7 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
   socks->pollfds = ptr;
 
   /* realloc sockinfos array */
-  if ((ptr = realloc(socks->pollfds,
+  if ((ptr = realloc(socks->sockinfos,
 		     newlen * sizeof(*socks->sockinfos))) == NULL) {
     return -1;
   }

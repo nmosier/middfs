@@ -187,7 +187,7 @@ int server_loop(struct middfs_socks *socks) {
       abort();
       
     case MFD_LSTN: /* POLLIN -- accept new client connection */
-      if (revents == POLLIN) {
+      if (revents | POLLIN) {
 	if ((client_sockfd = server_accept(fd)) >= 0) {
 	  /* valid client connection, so add to socket list */
 	  struct middfs_sockinfo sockinfo = {MFD_CREQ};

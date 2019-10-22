@@ -30,7 +30,7 @@
 #include "middfs-client-rsrc.h"
 #include "middfs-serial.h"
 
-#define LISTEN_PORT_DEFAULT 56789
+#define LISTEN_PORT_DEFAULT 12019
 
 /* file I/O function definitions */
 
