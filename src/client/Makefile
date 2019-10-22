@@ -8,7 +8,7 @@ CFLAGS += `pkg-config fuse3 --cflags`
 LDLIBS += `pkg-config fuse3 --libs`
 
 # Default Mount Parameters
-ROOT_DIR=tst2
+ROOT_DIR=tst
 CLIENT_DIR=home
 CLIENT_NAME=client
 

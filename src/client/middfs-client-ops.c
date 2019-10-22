@@ -16,17 +16,21 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 // TEMPORARY //
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/mman.h>
 // TEMPORARY //
 
 #include "middfs-client-ops.h"
 #include "middfs-client-rsrc.h"
 #include "middfs-serial.h"
+
+#define LISTEN_PORT_DEFAULT 56789
 
 /* file I/O function definitions */
 
@@ -401,9 +405,9 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("socket");
   }
-  int servport = 4321;
+  int servport = LISTEN_PORT_DEFAULT;
   struct sockaddr_in addr = {0};
-  addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  addr.sin_addr.s_addr = inet_addr("140.233.20.6");
   addr.sin_family = AF_INET;
   addr.sin_port = htons(servport);
 
@@ -413,6 +417,37 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
     perror("connect");
   }
 
+#if 1
+
+  // stupid test to produce "preliminary results"
+  size_t nbytes = 0x100;
+  FILE *outf = fopen("/home/nicholas/middfs/client.out", "w");
+  int infd = open("/home/nicholas/middfs/file.in", O_RDONLY);
+  uint8_t *data = mmap(NULL, nbytes, PROT_READ, 0, infd, 0);
+
+  assert(outf != NULL && infd >= 0 && data != MAP_FAILED);
+  
+  //  for (int i = 0; i < 16; ++i) {
+  clock_t clk_begin, clk_end;
+  size_t bytes_sent = 0;
+  clk_begin = clock();
+  while ((bytes_sent += write(sockfd, data, nbytes - bytes_sent))
+	 < nbytes) {}
+  clk_end = clock();
+  fprintf(outf, "%zx: %d\n", bytes_sent, clk_end - clk_begin);
+    //    nbytes *= 16;
+    //  }
+
+  clk_begin = clock();
+  sleep(1);
+  clk_end = clock();
+  fprintf(outf, "clock reference: 1 sec = %d\n",
+	  clk_end - clk_begin);
+  fclose(outf);
+  munmap(data, nbytes);
+  close(infd);
+  
+#else
   char buf[64];
   size_t bytes;
   if ((bytes = serialize_rsrc(rsrc, buf, 64)) > 64) {
@@ -426,6 +461,9 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
   if (send(sockfd, buf + 1, bytes - 1, 0) < bytes - 1) {
     perror("send");
   }
+
+#endif
+ 
   close(sockfd);
   
   

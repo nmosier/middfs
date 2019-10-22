@@ -12,7 +12,7 @@
 #include "middfs-rsrc.h"
 #include "middfs-util.h"
 
-#define LISTEN_PORT_DEFAULT "4321"
+#define LISTEN_PORT_DEFAULT "56789"
 
 int main(int argc, char *argv[]) {
   char *listen_port = LISTEN_PORT_DEFAULT;
