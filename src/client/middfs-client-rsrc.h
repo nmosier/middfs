@@ -28,7 +28,6 @@ struct client_rsrc {
   int mr_fd;
 };
 
-// char *middfs_localpath(const char *path);
 char *middfs_localpath_tmp(const char *middfs_path);
 int middfs_abspath(char **path);
 

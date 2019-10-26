@@ -156,9 +156,11 @@ static int middfs_readdir(const char *path, void *buf,
       break; /* buffer full? */
     }
   }
-
+  
   if (closedir(dir) < 0) {
     retv = -errno;
+  } else {
+    client_rsrc_tmp.mr_fd = -1; /* closedir deleted the fd */
   }
 
  cleanup:
