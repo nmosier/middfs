@@ -6,6 +6,7 @@
 #define __MIDDFS_REQ_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "middfs-rsrc.h"
 
@@ -36,10 +37,9 @@ enum middfs_request_type
    MREQ_READ,
    MREQ_WRITE,
    MREQ_READDIR,
-   MREQ_USERS,
+   MREQ_NTYPES /* counts number of types */
   };
 
-struct middfs_request req;
 
 /* TODO:  write serializer & deserializer for these structs */
 struct middfs_request {
@@ -47,15 +47,24 @@ struct middfs_request {
   
   char *mreq_requester;
 
-  struct rsrc rsrc;
+  struct rsrc mreq_rsrc;
+
+  /* request-specific members */
+  int mreq_mode;    /* access, chmod, create, open */
+  size_t mreq_size; /* readlink, truncate, read, write */
+  char *mreq_to;    /* symlink, rename */
+
+  /* (none): getattr, unlink, getattr, rmdir, readdir */
 };
 
 struct middfs_connect {
   /* TODO: stub */
+  int dummy;
 };
 
 struct middfs_disconnect {
   /* TODO: stub */
+  int dummy;
 };
 
 struct middfs_packet {
@@ -65,7 +74,6 @@ struct middfs_packet {
     struct middfs_request mpkt_request;
     struct middfs_connect mpkt_connect;
     struct middfs_disconnect mpk_disconnect;
-    // TODO -- add structs for other packet possibilities
   } mpkt_un;
 };
 

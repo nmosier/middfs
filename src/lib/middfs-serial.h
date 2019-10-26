@@ -12,13 +12,25 @@
 #include "middfs-rsrc.h"
 #include "middfs-pkt.h"
 
-#define USE_GENERIC_SERIALIZE 1
-
 /* (De)serialization function prototypes */
 typedef size_t (*serialize_f)(const void *ptr, void *buf,
 			      size_t nbytes);
 typedef size_t (*deserialize_f)(const void *buf, size_t nbytes,
 				void *ptr, int *errp);
+
+
+struct union_member {
+  int enum_val; /* value of corresponding enum */
+  serialize_f serialize; /* serialization function */
+  deserialize_f deserialize; /* deserialization function */
+  /* NOTE: More function pointers will probably be added. */
+};
+
+struct union_info {
+  int nmemb;
+  struct union_member membs[];
+};
+
 
 
 size_t deserialize_struct(const void *buf, size_t nbytes, void *ptr,
@@ -49,8 +61,28 @@ size_t deserialize_rsrc(const void *buf, size_t nbytes,
 size_t serialize_uint32(const uint32_t *uint, void *buf,
 			size_t nbytes);
 
+size_t serialize_uint64(const uint64_t *uint, void *buf,
+			size_t nbytes);
+
+
 size_t deserialize_uint32(const void *buf, size_t nbytes,
 			  uint32_t *uint, int *errp);
+
+size_t deserialize_int64(const void *buf, size_t nbytes,
+			 int64_t *int64, int *errp);
+
+size_t deserialize_uint64(const void *buf, size_t nbytes,
+			  uint64_t *uint, int *errp);
+
+size_t serialize_int64(const int64_t *int64, void *buf,
+		       size_t nbytes);
+
+size_t serialize_int32(const int32_t *int32, void *buf,
+		       size_t nbytes);
+
+size_t deserialize_int32(const void *buf, size_t nbytes,
+			 int32_t *int32, int *errp);
+
 
 size_t serialize_request(const struct middfs_request *req, void *buf,
 			 size_t nbytes);
@@ -69,6 +101,8 @@ size_t serialize_enum(int *e, void *buf,
 
 size_t deserialize_enum(const void *buf, size_t nbytes,
 			int *enump, int *errp);
+
+
 
 
 #endif

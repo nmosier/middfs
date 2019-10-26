@@ -45,22 +45,6 @@
  */
 
 
-/* serialize_union() -- serialize a union with base address
- *   _ptr_ into buffer _buf_.
- * ARGS:
- *  - ptr: base addresss of union
- *  - e: enum value to switch on
- *  - buf: pointer to serialization buffer
- *  - nbytes: the max number of bytes that should be written to
- *            _buf_
- *  - nmemb: the number of members in the union
- * VARARGS: There should be _nmemb_ triplets of varargs. Each triplet
- *          consists of the following:
- *  1. The offset of the member in the union.
- *  2. The enum value, passed in _e_, corresponding to this member.
- *  3. The serialization function for this member.
- */
-
 
 /* variable list:  offset, memblen */
 size_t serialize_struct(const void *ptr, void *buf, size_t nbytes,
@@ -110,7 +94,21 @@ size_t deserialize_struct(const void *buf, size_t nbytes, void *ptr,
   return used;
 }
 
-
+/* serialize_union() -- serialize a union with base address
+ *   _ptr_ into buffer _buf_.
+ * ARGS:
+ *  - ptr: base addresss of union
+ *  - e: enum value to switch on
+ *  - buf: pointer to serialization buffer
+ *  - nbytes: the max number of bytes that should be written to
+ *            _buf_
+ *  - nmemb: the number of members in the union
+ * VARARGS: There should be _nmemb_ triplets of varargs. Each triplet
+ *          consists of the following:
+ *  1. The offset of the member in the union.
+ *  2. The enum value, passed in _e_, corresponding to this member.
+ *  3. The serialization function for this member.
+ */
 size_t serialize_union(const void *ptr, int e, void *buf,
 		       size_t nbytes, int nmemb, ...) {
   const uint8_t *ptr_ = (const uint8_t *) ptr;
@@ -245,6 +243,12 @@ size_t serialize_uint32(const uint32_t *uint, void *buf,
   return sizeof(uint32_t);
 }
 
+size_t serialize_int32(const int32_t *int32, void *buf,
+		       size_t nbytes) {
+  return serialize_uint32((const uint32_t *) int32, buf,
+			  nbytes);
+}
+
 size_t deserialize_uint32(const void *buf, size_t nbytes,
 			  uint32_t *uint, int *errp) {
   /* bail on previous error */
@@ -257,6 +261,12 @@ size_t deserialize_uint32(const void *buf, size_t nbytes,
   }
   
   return sizeof(uint32_t);
+}
+
+size_t deserialize_int32(const void *buf, size_t nbytes,
+			  int32_t *int32, int *errp) {
+  return deserialize_uint32(buf, nbytes, (uint32_t *) int32,
+			    errp);
 }
 
 size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
@@ -305,22 +315,61 @@ size_t deserialize_rsrc(const void *buf, size_t nbytes,
 #endif
 }
 
-		   
-
-
-/* TODO -- serialization function for uint64_t */
 size_t serialize_request(const struct middfs_request *req, void *buf,
-			size_t nbytes) {
+			 size_t nbytes) {
   uint8_t *buf_ = (uint8_t *) buf;
   size_t used = 0;
 
-  /* TODO: write serialize_uint deserialize_uint */
+  /* serialize shared members */
   used += serialize_enum((int *) &req->mreq_type, buf_ + used,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf_ + used,
 			sizerem(nbytes, used));
-  used += serialize_rsrc(&req->rsrc, buf_ + used,
+  used += serialize_rsrc(&req->mreq_rsrc, buf_ + used,
 			 sizerem(nbytes, used));
+
+
+  /* serialize request-specific members */
+  
+  /* serialize _mode_ */
+  switch (req->mreq_type) {
+  case MREQ_ACCESS:
+  case MREQ_CHMOD:
+  case MREQ_CREATE:
+  case MREQ_OPEN:
+    used += serialize_int32(&req->mreq_mode, buf_ + used,
+			    sizerem(nbytes, used));
+    break;
+    
+  default:
+    break;
+  }
+
+  /* serialize _size_ */
+  switch (req->mreq_type) {
+  case MREQ_READLINK:
+  case MREQ_TRUNCATE:
+  case MREQ_READ:
+  case MREQ_WRITE:
+    used += serialize_uint64(&req->mreq_size, buf_ + used,
+			     sizerem(nbytes, used));
+    break;
+    
+  default:
+    break;
+  }
+
+  /* serialize _to_ */
+  switch (req->mreq_type) {
+  case MREQ_SYMLINK:
+  case MREQ_RENAME:
+    used += serialize_str(req->mreq_to, buf_ + used,
+			  sizerem(nbytes, used));
+    break;
+
+  default:
+    break;
+  }
   
   return used;
 }
@@ -341,7 +390,7 @@ size_t deserialize_request(const void *buf, size_t nbytes,
   used += deserialize_str(buf_ + used, sizerem(nbytes, used),
 			  &req->mreq_requester, errp);
   used += deserialize_rsrc(buf_ + used, sizerem(nbytes, used),
-			   &req->rsrc, errp);
+			   &req->mreq_rsrc, errp);
 
   return *errp ? 0 : used;
 }
@@ -421,3 +470,31 @@ size_t serialize_uint64(const uint64_t *uint, void *buf,
   return used;
 }
 
+size_t serialize_int64(const int64_t *int64, void *buf,
+		       size_t nbytes) {
+  return serialize_uint64((const uint64_t *) int64, buf, nbytes);
+}
+
+size_t deserialize_uint64(const void *buf, size_t nbytes,
+			  uint64_t *uint, int *errp) {
+  /* deserialize top 4 bytes, then deserialize bottom 4 bytes */
+  uint8_t *buf_ = (uint8_t *) buf;
+
+  size_t used = 0;
+  uint32_t uint1, uint2;
+
+  used += deserialize_uint32(buf_ + used, sizerem(nbytes, used), &uint1, errp);
+  used += deserialize_uint32(buf_ + used, sizerem(nbytes, used), &uint2, errp);
+
+  if (used <= nbytes) {
+    uint64_t val = (((uint64_t) uint1) << 32) + ((uint64_t) uint2);
+    *uint = val;
+  }
+  
+  return used;
+}
+
+size_t deserialize_int64(const void *buf, size_t nbytes,
+			 int64_t *int64, int *errp) {
+  return deserialize_uint64(buf, nbytes, (uint64_t *) int64, errp);
+}

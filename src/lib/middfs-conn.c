@@ -110,8 +110,6 @@ int server_loop(struct middfs_socks *socks) {
 
   for (int index = 0; index < socks->count; ++index) {
     int revents = socks->pollfds[index].revents;
-    int fd = socks->pollfds[index].fd;
-    struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
     /* remove socket if error occurred */
     if (revents & (POLLERR | POLLHUP)) {
@@ -122,7 +120,26 @@ int server_loop(struct middfs_socks *socks) {
       continue;
     }
 
-    int client_sockfd; /* for MFD_LSTN */
+    if (handle_socket_event(index, socks) < 0) {
+      return -1;
+    }
+    
+    fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
+  }
+  
+  return retv;
+  /* TODO: perhaps this should return the number of open 
+   * sockets -- if this ever reaches 0, then the server should shut
+   * down. */
+}
+
+
+int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
+  int revents = socks->pollfds[index].revents;
+  int fd = socks->pollfds[index].fd;
+  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
+  
+  int client_sockfd; /* for MFD_LSTN */
     switch (sockinfo->type) {
     case MFD_CREQ:
       if (revents & POLLIN) {
@@ -133,7 +150,7 @@ int server_loop(struct middfs_socks *socks) {
 	  perror("buffer_increase");
 	  abort(); /* TODO */
 	};
-
+	
 	size_t rem = buffer_rem(buf_in);
 	ssize_t bytes_read = 0;
 
@@ -141,13 +158,14 @@ int server_loop(struct middfs_socks *socks) {
 	  perror("read");
 	  abort(); /* TODO */
 	} else if (bytes_read == 0) {
+	  /* data ended prematurely -- remove socket from list */
 	  middfs_socks_remove(index, socks);
 	} else {
 	  /* update buffer pointers */
 	  buffer_advance(buf_in, bytes_read);
 
 	  /* try to deserialize buffer */
-	  /* TODO: this should be handled by package handler. */
+	  /* TODO: this should be handled by packet handler. */
 	  struct rsrc rsrc;
 	  int errp = 0;
 	  size_t bytes_ready = buffer_used(buf_in);
@@ -194,7 +212,7 @@ int server_loop(struct middfs_socks *socks) {
 	  if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
 	    perror("middfs_socks_add"); /* TODO -- resize should perr */
 	    close(client_sockfd);
-	    continue;
+	    abort(); /* TODO -- graceful exit. */
 	  }
 	}
       }
@@ -204,12 +222,6 @@ int server_loop(struct middfs_socks *socks) {
     default:
       abort();
     }
-  }
 
-  fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
-  
-  return retv;
-  /* TODO: perhaps this should return the number of open 
-   * sockets -- if this ever reaches 0, then the server should shut
-   * down. */
+ return 0;
 }
