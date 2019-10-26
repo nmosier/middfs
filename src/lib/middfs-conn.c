@@ -120,7 +120,13 @@ int server_loop(struct middfs_socks *socks) {
       continue;
     }
 
-    if (handle_socket_event(index, socks) < 0) {
+    int status = handle_socket_event(index, socks);
+    if (status > 0) {
+      /* remove socket */
+      if (middfs_socks_remove(index, socks) < 0) {
+	return -1;
+      }
+    } else if (status < 0) {
       return -1;
     }
     
@@ -133,12 +139,11 @@ int server_loop(struct middfs_socks *socks) {
    * down. */
 }
 
-
 int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
   int revents = socks->pollfds[index].revents;
   int fd = socks->pollfds[index].fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
-  
+
   int client_sockfd; /* for MFD_LSTN */
     switch (sockinfo->type) {
     case MFD_CREQ:
@@ -159,7 +164,7 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
 	  abort(); /* TODO */
 	} else if (bytes_read == 0) {
 	  /* data ended prematurely -- remove socket from list */
-	  middfs_socks_remove(index, socks);
+	  return 1;
 	} else {
 	  /* update buffer pointers */
 	  buffer_advance(buf_in, bytes_read);
@@ -175,7 +180,7 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
 	  
 	  if (errp) {
 	    /* invalid data; close socket */
-	    middfs_socks_remove(index, socks);
+	    return 1;
 	    
 	  } else {
 	    if (bytes_required <= bytes_ready) {
@@ -187,14 +192,13 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
 	      buffer_shift(buf_in, bytes_required);
 
 	      /* TODO: leave socket open for response. */
-	      middfs_socks_remove(index, socks);
+	      return 1;
 	      
 	    } else {
 	      /* read more bytes */
 	      /* TODO: Make sure pollfd event POLLIN is set */
 	    }
 	  }
-	  
 	}
       }
 
