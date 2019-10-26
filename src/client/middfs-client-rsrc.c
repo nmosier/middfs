@@ -4,6 +4,8 @@
  * Oct 2019
  */
 
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -162,7 +164,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
     return -EOPNOTSUPP;
     
   case MR_ROOT: /* stat info for middfs mountpoint */
-    memset(sb, sizeof(*sb), 0); /* initialize buffer */
+     memset(sb, 0, sizeof(*sb)); /* initialize buffer */
 
     /* mark as directory, read-only for owner & group */
     sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;
@@ -386,7 +388,7 @@ int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode) {
     } else {
       localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
       if (lchmod(localpath, mode) < 0) {
-	retv = -errno;
+         retv = -errno;
       }
       free(localpath);
     }

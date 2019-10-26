@@ -6,6 +6,10 @@
 #define __MIDDFS_SERVER_CONN_H
 
 #include "middfs-sock.h"
+#include "middfs-util.h"
+
+#define LISTEN_PORT_DEFAULT 4321
+#define LISTEN_PORT_DEFAULT_STR TOSTRING(LISTEN_PORT_DEFAULT)
 
 int server_start(const char *port, int backlog);
 int server_accept(int servfd);

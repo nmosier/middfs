@@ -12,7 +12,9 @@ DONE
 
 TODO
 [ ] Write serializaiton testing suite.
-
+[ ] Replace usage of fdopendir(3) and fdclosedir(3), since it's not portable.
+[ ] Replace usage of asprintf(3) with portable alternative.
+[ ] Fix lchmod
 
 client dir (static, local) vs. client name (determined by server
 upon connecting)

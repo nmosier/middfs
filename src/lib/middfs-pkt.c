@@ -44,7 +44,6 @@ int packet_handle_disconnect(struct middfs_packet *pkt) {
 }
 
 int packet_handle_request(struct middfs_packet *pkt) {
-  struct middfs_request *req = &pkt->mpkt_un.mpkt_request;
   /* TODO: stub */
 
   return -EOPNOTSUPP;

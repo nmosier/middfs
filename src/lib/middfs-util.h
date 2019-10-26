@@ -8,6 +8,9 @@
 #include <string.h>
 #include <stdint.h>
 
+#define STRINGIFY(s) #s
+#define TOSTRING(s) STRINGIFY(s)
+
 size_t sizerem(size_t nbytes, size_t used);
 size_t smin(size_t s1, size_t s2);
 size_t smax(size_t s1, size_t s2);

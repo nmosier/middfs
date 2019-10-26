@@ -5,6 +5,8 @@
 
 #define FUSE_USE_VERSION 31
 
+#define _GNU_SOURCE /* TODO: Shouldn't need this. Not portable. */
+
 #include <fuse.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,7 +68,7 @@ void show_help(const char *arg0) {
 
 
 void middfs_defaultopts(struct middfs_opts *opts) {
-  memset(opts, sizeof(*opts, 0), 0);
+   memset(opts, 0, sizeof(*opts));
 }
 
 int middfs_mirror_mount(const char *dir, const char *mirror) {
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
   
   /* set middfs option defaults */
   middfs_defaultopts(&middfs_opts);
-  memset(&middfs_conf, sizeof(middfs_conf), 0);
+  memset(&middfs_conf, 0, sizeof(middfs_conf));
   
   /* parse options */
   if (fuse_opt_parse(&args, &middfs_opts,
