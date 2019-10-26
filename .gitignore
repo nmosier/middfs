@@ -4,3 +4,4 @@ machine
 *.o
 *~
 export_syms
+*.a
