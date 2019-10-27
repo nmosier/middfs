@@ -28,4 +28,8 @@ ssize_t buffer_read(int fd, struct buffer *buf);
 ssize_t buffer_write(int fd, struct buffer *buf);
 ssize_t buffer_copy(struct buffer *buf, void *in, size_t nbytes);
 
+#include "middfs-serial.h"
+
+ssize_t buffer_serialize(const void *in, serialize_f serialf, struct buffer *buf);
+
 #endif

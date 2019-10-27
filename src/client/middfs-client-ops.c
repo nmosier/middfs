@@ -434,7 +434,6 @@ static int middfs_read(const char *path, char *buf, size_t size,
   }
 
   // TEST //
-  char buf_[BUFSIZE];
 
   /* connect to server */
   int clientfd;
@@ -450,7 +449,9 @@ static int middfs_read(const char *path, char *buf, size_t size,
      .mreq_rsrc = client_rsrc->mr_rsrc,
      .mreq_size = 4096,
     };
-  size_t used;
+
+  char buf_[BUFSIZE];
+  #if OLDTEST
   if ((used = serialize_request(&req, buf_, BUFSIZE)) > BUFSIZE) {
     fprintf(stderr, "serialize_request: not enough bytes");
     goto cleanup;
@@ -469,6 +470,22 @@ static int middfs_read(const char *path, char *buf, size_t size,
     used -= bytes_written;
   }
 
+#else
+  struct buffer buf_out = {0};
+
+  if (buffer_serialize(&req, (serialize_f) serialize_request, &buf_out) < 0) {
+    perror("buffer_serialize");
+    goto cleanup;
+  }
+
+  while (!buffer_isempty(&buf_out) && buffer_write(clientfd, &buf_out) >= 0) {}
+  if (!buffer_isempty(&buf_out)) {
+    perror("buffer_write");
+    goto cleanup;
+  }
+  
+#endif
+  
   /* shutdown for sending */
   if (shutdown(clientfd, SHUT_WR) < 0) {
     perror("shutdown");
@@ -478,7 +495,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
   /* read response */
   ssize_t bytes_read;
   size_t bytes_read_total = 0;
-  bufptr = buf_;
+  char *bufptr = buf_;
   while ((bytes_read = read(clientfd, bufptr, BUFSIZE)) > 0) {
     bytes_read_total += bytes_read;
     bufptr += bytes_read;

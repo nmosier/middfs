@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "middfs-util.h"
+#include "middfs-serial.h"
 #include "middfs-buf.h"
 
 size_t buffer_size(const struct buffer *buf) {
@@ -170,4 +171,24 @@ ssize_t buffer_copy(struct buffer *buf, void *in, size_t nbytes) {
   return 0;
 }
 
-/* */
+/* buffer_serialize() -- serialize datatype into buffer 
+ * ARGS:
+ *  - in: input data to be serialized
+ *  - serialf: function to serialize data 
+ *  - buf: buffer struct to operate on 
+ * RETV: the number of bytes written, or -1 on error.
+ */
+ssize_t buffer_serialize(const void *in, serialize_f serialf, struct buffer *buf) {
+  size_t used;
+  size_t rem = buffer_rem(buf);
+  
+  /* compute number of bytes required */
+  while ((used = serialf(in, buf->ptr, rem)) < rem) {
+    if (buffer_resize(buf, buffer_used(buf) + used) < 0) {
+      return -1; /* buffer_resize() error */
+    }
+    rem = used;
+  }
+
+  return used;
+}

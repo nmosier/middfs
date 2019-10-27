@@ -66,8 +66,6 @@ size_t serialize_struct(const void *ptr, void *buf, size_t nbytes,
   return used;
 }
 
-
-
 size_t deserialize_struct(const void *buf, size_t nbytes, void *ptr,
 			  int *errp, int nmemb, ...) {
   const uint8_t *buf_ = (const uint8_t *) buf;
@@ -498,3 +496,4 @@ size_t deserialize_int64(const void *buf, size_t nbytes,
 			 int64_t *int64, int *errp) {
   return deserialize_uint64(buf, nbytes, (uint64_t *) int64, errp);
 }
+
