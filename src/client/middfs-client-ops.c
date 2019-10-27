@@ -23,6 +23,10 @@
 #include "middfs-serial.h"
 #include "middfs-conn.h"
 
+// TEST //
+#include <sys/types.h>
+#include <sys/socket.h>
+// END TEST //
 
 /* file I/O function definitions */
 
@@ -407,6 +411,8 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
   return 0;
 }
 
+
+#define BUFSIZE 256
 static int middfs_read(const char *path, char *buf, size_t size,
 		       off_t offset, struct fuse_file_info *fi) {
   int retv = 0;
@@ -427,10 +433,78 @@ static int middfs_read(const char *path, char *buf, size_t size,
     client_rsrc = (struct client_rsrc *) fi->fh;
   }
 
+  // TEST //
+  char buf_[BUFSIZE];
+
+  /* connect to server */
+  int clientfd;
+  if ((clientfd = inet_connect("140.233.20.6", LISTEN_PORT_DEFAULT)) < 0) {
+    perror("inet_connect");
+    goto cleanup;
+  }
+  
+  /* serialize request */
+  struct middfs_request req =
+    {.mreq_type = MREQ_READ,
+     .mreq_requester = strdup("nicholas"),
+     .mreq_rsrc = client_rsrc->mr_rsrc,
+     .mreq_size = 4096,
+    };
+  size_t used;
+  if ((used = serialize_request(&req, buf_, BUFSIZE)) > BUFSIZE) {
+    fprintf(stderr, "serialize_request: not enough bytes");
+    goto cleanup;
+  }
+
+  /* send request */
+  ssize_t bytes_written;
+  char *bufptr = buf_;
+  while (used > 0) {
+    if ((bytes_written = write(clientfd, bufptr, used)) < 0) {
+      perror("write");
+      goto cleanup;
+    }
+
+    bufptr += bytes_written;
+    used -= bytes_written;
+  }
+
+  /* shutdown for sending */
+  if (shutdown(clientfd, SHUT_WR) < 0) {
+    perror("shutdown");
+    goto cleanup;
+  }
+
+  /* read response */
+  ssize_t bytes_read;
+  size_t bytes_read_total = 0;
+  bufptr = buf_;
+  while ((bytes_read = read(clientfd, bufptr, BUFSIZE)) > 0) {
+    bytes_read_total += bytes_read;
+    bufptr += bytes_read;
+  }
+  if (bytes_read < 0) {
+    perror("read");
+    goto cleanup;
+  }
+
+  /* print out response */
+  printf("%s", buf_);
+
+  /* close client socket */
+  if (close(clientfd) < 0) {
+    perror("close");
+    goto cleanup;
+  }
+  
+  
+  /// END TEST ///
+
   if ((retv = pread(client_rsrc->mr_fd, buf, size, offset)) < 0) {
     retv = -errno;
     goto cleanup;
   }
+
 
  cleanup:
   /* delete temporary resource if needed */

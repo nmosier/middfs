@@ -47,11 +47,9 @@ int inet_connect(const char *IP_addr, int port) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
 
-  int conn;
-  if ((conn = connect(sockfd, (struct sockaddr *) &addr,
-		      sizeof(addr))) < 0) {
+  if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
     return -1; /* connect(2) error */
   }
 
-  return conn; /* success */
+  return sockfd; /* success */
 }

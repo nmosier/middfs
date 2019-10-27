@@ -11,6 +11,7 @@ LDLIBS += `pkg-config fuse3 --libs`
 ROOT_DIR=tst
 CLIENT_DIR=home
 CLIENT_NAME=client
+FUSE_ARGS=-s -f # run in foreground & single-threaded
 
 # TODO -- C header file dependencies
 
@@ -26,7 +27,7 @@ clean:
 
 .PHONY: mount
 mount:
-	$(realpath $(BIN)) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
+	$(realpath $(BIN)) $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
 
 .PHONY: umount
 umount:
