@@ -11,11 +11,12 @@
 #define STRINGIFY(s) #s
 #define TOSTRING(s) STRINGIFY(s)
 
+#define MAX(i1, i2) ((i1) < (i2) ? (i2) : (i1))
+
 size_t sizerem(size_t nbytes, size_t used);
 size_t smin(size_t s1, size_t s2);
 size_t smax(size_t s1, size_t s2);
 
-#define MAX(i1, i2) ((i1) < (i2) ? (i2) : (i1))
-#define MIN(i1, i2) ((i1) < (i2) ? (i1) : (i2))
+int inet_connect(const char *IP_addr, int port);
 
 #endif

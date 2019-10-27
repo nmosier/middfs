@@ -18,14 +18,6 @@
 #include <sys/stat.h>
 #include <assert.h>
 
-// TEMPORARY //
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/mman.h>
-// TEMPORARY //
-
 #include "middfs-client-ops.h"
 #include "middfs-client-rsrc.h"
 #include "middfs-serial.h"
@@ -402,43 +394,7 @@ static int middfs_open(const char *path, struct fuse_file_info *fi) {
     free(client_rsrc);
     return retv;
   }
-
-  // TEMPORARY
-  struct rsrc *rsrc = &client_rsrc->mr_rsrc;
-  int sockfd;
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    perror("socket");
-  }
-  int servport = LISTEN_PORT_DEFAULT;
-  struct sockaddr_in addr = {0};
-  addr.sin_addr.s_addr = inet_addr("140.233.20.6");
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(servport);
-
-  int conn;
-  if ((conn = connect(sockfd, (struct sockaddr *) &addr,
-		      sizeof(addr))) < 0) {
-    perror("connect");
-  }
-
-  char buf[64];
-  size_t bytes;
-  if ((bytes = serialize_rsrc(rsrc, buf, 64)) > 64) {
-    fprintf(stderr, "too many bytes\n");
-  }
-
-  if (send(sockfd, buf, 1, 0) < 1) {
-    perror("send");
-  }
-  if (send(sockfd, buf + 1, bytes - 1, 0) < bytes - 1) {
-    perror("send");
-  }
-
-  close(sockfd);
   
-  
-  // TEMPORARY
-
   /* open resource */
   if ((retv = client_rsrc_open(client_rsrc, fi->flags)) < 0) {
     client_rsrc_delete(client_rsrc);
