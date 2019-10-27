@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "middfs-util.h"
 #include "middfs-buf.h"
@@ -102,4 +103,69 @@ void buffer_advance(struct buffer *buf, size_t nbytes) {
 
   /* update buffer pointer */
   buf->ptr = (uint8_t *) buf->ptr + nbytes;
+}
+
+/* buffer_read_once() -- read once from fd into buffer,
+ *                       as many bytes as possible
+ * ARGS:
+ *  - fd: file descriptor to read(2) from
+ *  - buf: pointer to buffer struct
+ * RETV: see read(2)
+ */
+ssize_t buffer_read(int fd, struct buffer *buf) {
+  /* make sure there is space in the buffer */
+  if (buffer_increase(buf) < 0) {
+    return -1;
+  }
+
+  size_t rem = buffer_rem(buf);
+  ssize_t bytes_read;
+
+  if ((bytes_read = read(fd, buf->ptr, rem)) >= 0) {
+    /* advance buffer pointer if read was successful */
+    buffer_advance(buf, bytes_read);
+  }
+
+  return bytes_read;
+}
+
+/* buffer_write() -- write once from buffer to fd,
+ *                   as many bytes as possible 
+ * ARGS:
+ *  - fd: file descriptor to write(2) to
+ *  - buf: pointer to buffer struct
+ */
+ssize_t buffer_write(int fd, struct buffer *buf) {
+  size_t used = buffer_used(buf);
+
+  ssize_t bytes_written;
+
+  if ((bytes_written = write(fd, buf->begin, used)) >= 0) {
+    buffer_shift(buf, bytes_written);
+  }
+
+  return bytes_written;
+}
+
+/* buffer_copy() -- copy bytes into buffer, appending
+ * ARGS:
+ *  - buf: buffer to copy bytes into
+ *  - in: input data ptr
+ *  - nbytes: number of bytes to copy
+ * RETV: -1 on error; 0 on success.
+ */
+ssize_t buffer_copy(struct buffer *buf, void *in, size_t nbytes) {
+  size_t rem = buffer_rem(buf);
+
+  if (rem < nbytes) {
+    if (buffer_resize(buf, buffer_size(buf) + nbytes) < 0) {
+      return -1;
+    }
+  }
+
+  /* copy data & update pointer */
+  memcpy(buf->ptr, in, nbytes);
+  buffer_advance(buf, nbytes);
+
+  return 0;
 }

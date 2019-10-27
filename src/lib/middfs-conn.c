@@ -19,60 +19,60 @@
 
 /* server_start() -- start the server on port _port_ 
    with backlog _backlog_.
- * RETV: the server socket on success, -1 on error.
- */
+   * RETV: the server socket on success, -1 on error.
+   */
 int server_start(const char *port, int backlog) {
   int servsock_fd = -1;
   struct addrinfo *res = NULL;
   int gai_stat;
   int error = 0;
 
-   /* obtain socket */
-   if ((servsock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-      perror("server_start: socket");
-      return -1;
-   }
+  /* obtain socket */
+  if ((servsock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    perror("server_start: socket");
+    return -1;
+  }
 
-   /* get address info */
-   struct addrinfo hints = {0};
-   hints.ai_family = AF_INET;
-   hints.ai_socktype = SOCK_STREAM;
-   hints.ai_flags = AI_PASSIVE;
-   if ((gai_stat = getaddrinfo(NULL, port, &hints, &res)) != 0) {
-      /* getaddrinfo() error */
-      fprintf(stderr, "server_start: getaddrinfo: %s\n",
-	      gai_strerror(gai_stat));
-      error = 1;
-      goto cleanup;
-   }
+  /* get address info */
+  struct addrinfo hints = {0};
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE;
+  if ((gai_stat = getaddrinfo(NULL, port, &hints, &res)) != 0) {
+    /* getaddrinfo() error */
+    fprintf(stderr, "server_start: getaddrinfo: %s\n",
+	    gai_strerror(gai_stat));
+    error = 1;
+    goto cleanup;
+  }
    
-   /* bind socket to port */
-   if (bind(servsock_fd, res->ai_addr, res->ai_addrlen) < 0) {
-     perror("server_start: bind");
-     error = 1;
-     goto cleanup;
-   }
+  /* bind socket to port */
+  if (bind(servsock_fd, res->ai_addr, res->ai_addrlen) < 0) {
+    perror("server_start: bind");
+    error = 1;
+    goto cleanup;
+  }
 
-   /* listen for connections */
-   if (listen(servsock_fd, backlog) < 0) {
-     perror("listen");
-     error = 1;
-     goto cleanup;
-   }
+  /* listen for connections */
+  if (listen(servsock_fd, backlog) < 0) {
+    perror("listen");
+    error = 1;
+    goto cleanup;
+  }
 
  cleanup:
-   /* close server socket (if error occurred) */
-   if (error && servsock_fd >= 0 && close(servsock_fd) < 0) {
-      perror("close");
-   }
+  /* close server socket (if error occurred) */
+  if (error && servsock_fd >= 0 && close(servsock_fd) < 0) {
+    perror("close");
+  }
 
-   /* free res addrinfo (unconditionally) */
-   if (res) {
-     freeaddrinfo(res);
-   }
+  /* free res addrinfo (unconditionally) */
+  if (res) {
+    freeaddrinfo(res);
+  }
 
-   /* return -1 on error, server socket on success */
-   return error ? -1 : servsock_fd;
+  /* return -1 on error, server socket on success */
+  return error ? -1 : servsock_fd;
 }
 
 
@@ -84,18 +84,18 @@ int server_start(const char *port, int backlog) {
  * NOTE: blocks.
  */
 int server_accept(int servfd) {
-   socklen_t addrlen;
-   struct sockaddr_in client_sa;
-   int client_fd;
+  socklen_t addrlen;
+  struct sockaddr_in client_sa;
+  int client_fd;
 
-   /* accept socket */
-   addrlen = sizeof(client_sa);
-   if ((client_fd = accept(servfd, (struct sockaddr *) &client_sa,
-			   &addrlen)) < 0) {
-     perror("server_accept: accept");
-   }
+  /* accept socket */
+  addrlen = sizeof(client_sa);
+  if ((client_fd = accept(servfd, (struct sockaddr *) &client_sa,
+			  &addrlen)) < 0) {
+    perror("server_accept: accept");
+  }
 
-   return client_fd;
+  return client_fd;
 }
 
 
@@ -114,7 +114,7 @@ int server_loop(struct middfs_socks *socks) {
     /* remove socket if error occurred */
     if (revents & (POLLERR | POLLHUP)) {
       if (middfs_socks_remove(index, socks) < 0) {
-	abort(); /* TODO */
+	return -1;
       }
       --index;
       continue;
@@ -145,87 +145,143 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
   int client_sockfd; /* for MFD_LSTN */
-    switch (sockinfo->type) {
-    case MFD_CREQ:
-      if (revents & POLLIN) {
-	struct buffer *buf_in = &sockinfo->buf_in;
-	
-	/* prepare for writing */
-	if (buffer_increase(buf_in) < 0) {
-	  perror("buffer_increase");
-	  abort(); /* TODO */
-	};
-	
-	size_t rem = buffer_rem(buf_in);
-	ssize_t bytes_read = 0;
-
-	if ((bytes_read = read(fd, buf_in->ptr, rem))  < 0) {
-	  perror("read");
-	  abort(); /* TODO */
-	} else if (bytes_read == 0) {
-	  /* data ended prematurely -- remove socket from list */
-	  return 1;
-	} else {
-	  /* update buffer pointers */
-	  buffer_advance(buf_in, bytes_read);
-
-	  /* try to deserialize buffer */
-	  /* TODO: this should be handled by packet handler. */
-	  struct rsrc rsrc;
-	  int errp = 0;
-	  size_t bytes_ready = buffer_used(buf_in);
-	  size_t bytes_required = deserialize_rsrc(buf_in->begin,
-						   bytes_ready, &rsrc,
-						   &errp);
-	  
-	  if (errp) {
-	    /* invalid data; close socket */
-	    return 1;
-	    
-	  } else {
-	    if (bytes_required <= bytes_ready) {
-	      /* successfully deserialized packet */
-	      print_rsrc(&rsrc);
-	      
-	      
-	      /* remove used bytes */
-	      buffer_shift(buf_in, bytes_required);
-
-	      /* TODO: leave socket open for response. */
-	      return 1;
-	      
-	    } else {
-	      /* read more bytes */
-	      /* TODO: Make sure pollfd event POLLIN is set */
-	    }
-	  }
+  switch (sockinfo->type) {
+  case MFD_CREQ:
+    return handle_creq_event(index, socks);
+    
+  case MFD_SREQ:
+    /* TODO -- not yet implemented */
+    abort();
+      
+  case MFD_LSTN: /* POLLIN -- accept new client connection */
+    if (revents | POLLIN) {
+      if ((client_sockfd = server_accept(fd)) >= 0) {
+	/* valid client connection, so add to socket list */
+	struct middfs_sockinfo sockinfo = {MFD_CREQ};
+	if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
+	  perror("middfs_socks_add"); /* TODO -- resize should perr */
+	  close(client_sockfd);
+	  abort(); /* TODO -- graceful exit. */
 	}
       }
+    }
+    break;
+    
+  case MFD_NONE:
+  default:
+    abort();
+  }
 
-      break;
-      
-    case MFD_SREQ:
-      /* TODO -- not yet implemented */
-      abort();
-      
-    case MFD_LSTN: /* POLLIN -- accept new client connection */
-      if (revents | POLLIN) {
-	if ((client_sockfd = server_accept(fd)) >= 0) {
-	  /* valid client connection, so add to socket list */
-	  struct middfs_sockinfo sockinfo = {MFD_CREQ};
-	  if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
-	    perror("middfs_socks_add"); /* TODO -- resize should perr */
-	    close(client_sockfd);
-	    abort(); /* TODO -- graceful exit. */
-	  }
-	}
-      }
-      break;
-      
-    case MFD_NONE:
-    default:
-      abort();
+  return 0;
+}
+
+int handle_creq_event(nfds_t index, struct middfs_socks *socks) {
+  struct pollfd *pollfd = &socks->pollfds[index];
+  int revents = pollfd->revents;
+
+  if (revents & POLLIN) {
+    return handle_creq_incoming(index, socks);
+  }
+  if (revents & POLLOUT) {
+    return handle_creq_outgoing(index, socks);
+  }
+
+  return 0;
+}
+
+int handle_creq_incoming(nfds_t index, struct middfs_socks *socks) {
+  struct pollfd *pollfd = &socks->pollfds[index];
+  int fd = pollfd->fd;
+  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
+
+  struct buffer *buf_in = &sockinfo->buf_in;
+  ssize_t bytes_read = buffer_read(fd, buf_in);
+
+  if (bytes_read < 0) {
+    perror("buffer_read");
+    middfs_socks_remove(index, socks);
+    return -1;
+  }
+  if (bytes_read == 0) {
+    /* data ended prematurely -- remove socket from list */
+    return middfs_socks_remove(index, socks);
+  }
+
+  /* try to deserialize buffer */
+  /* TODO: this should be handled by packet handler. */
+  struct rsrc rsrc;
+  int errp = 0;
+  size_t bytes_ready = buffer_used(buf_in);
+  size_t bytes_required = deserialize_rsrc(buf_in->begin, bytes_ready, &rsrc, &errp);
+    
+  if (errp) {
+    /* invalid data; close socket */
+    return middfs_socks_remove(index, socks);
+  }	    
+
+  if (bytes_required <= bytes_ready) {
+    /* successfully deserialized packet */
+    print_rsrc(&rsrc);
+
+    /* remove used bytes */
+    buffer_shift(buf_in, bytes_required);
+
+    /* shutdown socket for incoming data */
+    if (shutdown(fd, SHUT_RD) < 0) {
+      perror("shutdown");
+      middfs_socks_remove(index, socks);
+      return -1;
     }
 
- return 0;
+    //// TESTING /////
+    struct buffer *buf_out = &sockinfo->buf_out;
+    char *text = "this is the file you were looking for\n";
+
+    if (buffer_copy(buf_out, text, strlen(text) + 1) < 0) {
+      perror("buffer_copy");
+      middfs_socks_remove(index, socks);
+      return -1;
+    }
+    ///// TESTING ////
+
+    
+    /* configure socket for outgoing data */
+    socks->pollfds[index].events = POLLOUT;      
+  }
+  
+  return 0;
+}
+
+int handle_creq_outgoing(nfds_t index, struct middfs_socks *socks) {
+  /* TODO: implement correctly. This is just a test. */
+  int fd = socks->pollfds[index].fd;
+  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
+  struct buffer *buf_out = &sockinfo->buf_out;
+
+  ssize_t bytes_written = buffer_write(fd, buf_out);
+
+  if (bytes_written < 0) {
+    /* error */
+    perror("buffer_write");
+    middfs_socks_remove(index, socks);
+    return -1;
+  }
+  if (bytes_written == 0) {
+    /* all of bytes written */
+    middfs_socks_remove(index, socks);
+  }
+  
+  return 0;
+}
+
+int handle_sreq_event(nfds_t index, struct middfs_socks *socks) {
+  return -1; /* STUB */
+}
+
+int handle_connect_event(nfds_t index, struct middfs_socks *socks) {
+  return -1; /* STUB */
+}
+
+int handle_disconnect_event(nfds_t index, struct middfs_socks *socks) {
+  return -1; /* STUB */
 }

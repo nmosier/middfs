@@ -17,5 +17,14 @@ int server_loop(struct middfs_socks *socks);
 
 int handle_socket_event(nfds_t index, struct middfs_socks *socks);
 
+int handle_creq_event(nfds_t index, struct middfs_socks *socks);
+int handle_sreq_event(nfds_t index, struct middfs_socks *socks);
+int handle_connect_event(nfds_t index, struct middfs_socks *socks);
+int handle_disconnect_event(nfds_t index, struct middfs_socks *socks);
+
+int handle_creq_outgoing(nfds_t index, struct middfs_socks *socks);
+int handle_creq_incoming(nfds_t index, struct middfs_socks *socks);
+
+
 #endif
 
