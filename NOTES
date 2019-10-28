@@ -64,3 +64,13 @@ Brainstorming
 There needs to be a way to associate entries in the socks[] list --
 for example, when a server has to make a request to another client,
 it needs to associate that with the response.
+
+
+
+~~~~~~~~~~~~~~~~
+
+The server needs to maintain a list of clients who are "connected".
+Each entry in this list should contain the following information:
+ 1. Client username.
+ 2. Client IP.
+[3. Client listening port?]
