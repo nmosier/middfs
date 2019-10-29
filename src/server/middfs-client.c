@@ -9,6 +9,7 @@
 #include "middfs-util.h"
 #include "middfs-client.h"
 
+static int clients_resize(struct clients *clients, size_t newlen);
 static void clients_sort(struct clients *clients);
 
 /* CLIENT functions */
@@ -81,7 +82,25 @@ int clients_add(struct client *client, struct clients *clients) {
   return 0;
 }
 
-int clients_resize(struct clients *clients, size_t newlen) {
+
+/* client_find() -- find client given name in clients vector 
+ * ARGS:
+ *  - username: search for client with this name
+ *  - clients: client vector
+ * RETV: pointer to entry if found; NULL otherwise.
+ */
+struct client *client_find(const char *username, const struct clients *clients) {
+  const struct client key = {.username = (char *) username};
+  return (struct client *) bsearch(&key, clients->vec, clients->cnt, sizeof(key),
+				   (int (*)(const void *, const void *)) client_cmp);
+}
+
+
+/* clients_resize() -- resize underlying clients array. 
+ * NOTE: This is only for internal use by clients_* functions.
+ * NOTE: Deletes any extra elements if downsized. 
+ */
+static int clients_resize(struct clients *clients, size_t newlen) {
   /* remove any elements that will be truncated */
   while (clients->cnt > newlen) {
     clients_remove(clients->cnt - 1, clients);
@@ -99,13 +118,11 @@ int clients_resize(struct clients *clients, size_t newlen) {
   return 0;
 }
 
+/* clients_sort() -- sort underlying clients array.
+ * NOTE: Only for internal use by client_* functions. 
+ */
 static void clients_sort(struct clients *clients) {
   qsort(clients->vec, clients->cnt, sizeof(*clients->vec), (int (*)(const void *, const void *))
 	client_cmp);
 }
 
-struct client *client_find(const char *username, const struct clients *clients) {
-  const struct client key = {.username = (char *) username};
-  return (struct client *) bsearch(&key, clients->vec, clients->cnt, sizeof(key),
-				   (int (*)(const void *, const void *)) client_cmp);
-}
