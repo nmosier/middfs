@@ -11,6 +11,7 @@ DONE
 [X] Write serialization functions
 
 TODO
+[ ] Delete MFD_SREQ
 [ ] Write buffer_serialize_struct().
 [ ] Write serializaiton testing suite.
 [ ] Replace usage of fdopendir(3) and fdclosedir(3), since it's not portable.
