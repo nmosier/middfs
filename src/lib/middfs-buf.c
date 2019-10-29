@@ -183,12 +183,17 @@ ssize_t buffer_serialize(const void *in, serialize_f serialf, struct buffer *buf
   size_t rem = buffer_rem(buf);
   
   /* compute number of bytes required */
-  while ((used = serialf(in, buf->ptr, rem)) < rem) {
+  /* NOTE: This while-loop is intended to only run ONCE or TWICE.
+   */
+  while ((used = serialf(in, buf->ptr, rem)) > rem) {
     if (buffer_resize(buf, buffer_used(buf) + used) < 0) {
       return -1; /* buffer_resize() error */
     }
     rem = used;
   }
 
+  /* advance pointer in buffer past written data */
+  buffer_advance(buf, used);
+  
   return used;
 }
