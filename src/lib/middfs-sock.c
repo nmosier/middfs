@@ -91,8 +91,7 @@ int middfs_socks_add(int sockfd,
   pollfd->fd = sockfd;
   
   switch (sockinfo->type) {
-  case MFD_CREQ:
-  case MFD_SREQ:
+  case MFD_REQ:
     pollfd->events = POLLIN;
     break;
     

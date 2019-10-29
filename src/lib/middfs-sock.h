@@ -12,9 +12,9 @@
 /* middfs_fd_e -- enum describing type of socket */
 enum middfs_socktype
   {MFD_NONE, /* None */
-   MFD_CREQ, /* Client Request (client -> server) */
-   MFD_SREQ, /* Server Request (server -> client) */
+   MFD_REQ, /* Client Request (client -> server) */
    MFD_LSTN, /* Listening Socket (unique) */
+   MFD_NTYPES /* counts number of enum types */
   };
 
 /* struct middfs_sockinfo -- information about socket

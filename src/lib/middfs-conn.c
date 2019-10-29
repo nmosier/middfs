@@ -146,18 +146,14 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
 
   int client_sockfd; /* for MFD_LSTN */
   switch (sockinfo->type) {
-  case MFD_CREQ:
-    return handle_creq_event(index, socks);
-    
-  case MFD_SREQ:
-    /* TODO -- not yet implemented */
-    abort();
-      
+  case MFD_REQ:
+    return handle_req_event(index, socks);
+        
   case MFD_LSTN: /* POLLIN -- accept new client connection */
     if (revents & POLLIN) {
       if ((client_sockfd = server_accept(fd)) >= 0) {
 	/* valid client connection, so add to socket list */
-	struct middfs_sockinfo sockinfo = {MFD_CREQ};
+	struct middfs_sockinfo sockinfo = {MFD_REQ};
 	if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
 	  perror("middfs_socks_add"); /* TODO -- resize should perr */
 	  close(client_sockfd);
@@ -175,21 +171,21 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
   return 0;
 }
 
-int handle_creq_event(nfds_t index, struct middfs_socks *socks) {
+int handle_req_event(nfds_t index, struct middfs_socks *socks) {
   struct pollfd *pollfd = &socks->pollfds[index];
   int revents = pollfd->revents;
 
   if (revents & POLLIN) {
-    return handle_creq_incoming(index, socks);
+    return handle_req_incoming(index, socks);
   }
   if (revents & POLLOUT) {
-    return handle_creq_outgoing(index, socks);
+    return handle_req_outgoing(index, socks);
   }
 
   return 0;
 }
 
-int handle_creq_incoming(nfds_t index, struct middfs_socks *socks) {
+int handle_req_incoming(nfds_t index, struct middfs_socks *socks) {
   struct pollfd *pollfd = &socks->pollfds[index];
   int fd = pollfd->fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
@@ -207,11 +203,20 @@ int handle_creq_incoming(nfds_t index, struct middfs_socks *socks) {
     return middfs_socks_remove(index, socks);
   }
 
+  /* 1. Try to deserialize buffer. 
+   * 2. If successful, call handler.
+   */
+
+  /* PACKET HANDLER  CODE -- need to separate/modularize */
+  
   /* try to deserialize buffer */
   /* TODO: this should be handled by packet handler. */
   struct rsrc rsrc;
   int errp = 0;
   size_t bytes_ready = buffer_used(buf_in);
+
+  /* TODO: this deserialization function is client/server dependent, so should be stored
+   * as function pointer in struct handler_info. */
   size_t bytes_required = deserialize_rsrc(buf_in->begin, bytes_ready, &rsrc, &errp);
     
   if (errp) {
@@ -252,7 +257,7 @@ int handle_creq_incoming(nfds_t index, struct middfs_socks *socks) {
   return 0;
 }
 
-int handle_creq_outgoing(nfds_t index, struct middfs_socks *socks) {
+int handle_req_outgoing(nfds_t index, struct middfs_socks *socks) {
   /* TODO: implement correctly. This is just a test. */
   int fd = socks->pollfds[index].fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
@@ -272,10 +277,6 @@ int handle_creq_outgoing(nfds_t index, struct middfs_socks *socks) {
   }
   
   return 0;
-}
-
-int handle_sreq_event(nfds_t index, struct middfs_socks *socks) {
-  return -1; /* STUB */
 }
 
 int handle_connect_event(nfds_t index, struct middfs_socks *socks) {
