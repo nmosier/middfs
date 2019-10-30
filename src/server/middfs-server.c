@@ -66,7 +66,10 @@ int main(int argc, char *argv[]) {
   }
 
   /* call server loop */
-  while (server_loop(&socks) >= 0) {}
+  struct handler_info hi =
+    {.handler = NULL}; /* TODO */
+  
+  while (server_loop(&socks, &hi) >= 0) {}
   
  cleanup:
   if (middfs_socks_delete(&socks) < 0) {

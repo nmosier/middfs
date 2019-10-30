@@ -24,21 +24,8 @@ typedef int (*handler_f)(const void *in, void *out);
  * TODO
  */ 
 struct handler_info {
-  /* function pointer for deserializing incoming data. */
-  deserialize_f in_deserial;
-
-  /* size of struct being deserialized from input */
-  size_t in_size;
-
   /* function pointer that handles the value deserialized by _in_deserial_*/
-  handler_f in_handler;
-
-  /* function pointer for serializing outgoing struct */
-  serialize_f out_serial;
-
-  /* size of struct being serialized to output */
-  size_t out_size; 
-  
+  handler_f handler;
 };
 
 #endif

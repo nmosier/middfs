@@ -16,6 +16,7 @@
 #include "middfs-conn.h"
 #include "middfs-rsrc.h"
 #include "middfs-serial.h"
+#include "middfs-handler.h"
 
 /* server_start() -- start the server on port _port_ 
    with backlog _backlog_.
@@ -99,7 +100,7 @@ int server_accept(int servfd) {
 }
 
 
-int server_loop(struct middfs_socks *socks) {
+int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
   int retv = 0;
 
   int readyfds = poll(socks->pollfds, socks->count, -1);
@@ -120,7 +121,7 @@ int server_loop(struct middfs_socks *socks) {
       continue;
     }
 
-    int status = handle_socket_event(index, socks);
+    int status = handle_socket_event(index, socks, hi);
     if (status > 0) {
       /* remove socket */
       if (middfs_socks_remove(index, socks) < 0) {
@@ -139,29 +140,16 @@ int server_loop(struct middfs_socks *socks) {
    * down. */
 }
 
-int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
-  int revents = socks->pollfds[index].revents;
-  int fd = socks->pollfds[index].fd;
+int handle_socket_event(nfds_t index, struct middfs_socks *socks,
+			const struct handler_info *hi) {
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
-  int client_sockfd; /* for MFD_LSTN */
   switch (sockinfo->type) {
-  case MFD_REQ:
-    return handle_req_event(index, socks);
+  case MFD_PKT:
+    return handle_pkt_event(index, socks, hi);
         
   case MFD_LSTN: /* POLLIN -- accept new client connection */
-    if (revents & POLLIN) {
-      if ((client_sockfd = server_accept(fd)) >= 0) {
-	/* valid client connection, so add to socket list */
-	struct middfs_sockinfo sockinfo = {MFD_REQ};
-	if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
-	  perror("middfs_socks_add"); /* TODO -- resize should perr */
-	  close(client_sockfd);
-	  abort(); /* TODO -- graceful exit. */
-	}
-      }
-    }
-    break;
+    return handle_lstn_event(index, socks);
     
   case MFD_NONE:
   default:
@@ -171,21 +159,41 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks) {
   return 0;
 }
 
-int handle_req_event(nfds_t index, struct middfs_socks *socks) {
-  struct pollfd *pollfd = &socks->pollfds[index];
-  int revents = pollfd->revents;
-
+int handle_lstn_event(nfds_t index, struct middfs_socks *socks) {
+  int revents = socks->pollfds[index].revents;
+  int fd = socks->pollfds[index].fd;
+  int client_sockfd;
+  
   if (revents & POLLIN) {
-    return handle_req_incoming(index, socks);
-  }
-  if (revents & POLLOUT) {
-    return handle_req_outgoing(index, socks);
+    if ((client_sockfd = server_accept(fd)) >= 0) {
+      /* valid client connection, so add to socket list */
+      struct middfs_sockinfo sockinfo = {MFD_PKT};
+      if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
+	perror("middfs_socks_add"); /* TODO -- resize should perr */
+	close(client_sockfd);
+	return -1;
+      }
+    }
   }
 
   return 0;
 }
 
-int handle_req_incoming(nfds_t index, struct middfs_socks *socks) {
+int handle_pkt_event(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
+  struct pollfd *pollfd = &socks->pollfds[index];
+  int revents = pollfd->revents;
+
+  if (revents & POLLIN) {
+    return handle_pkt_incoming(index, socks, hi);
+  }
+  if (revents & POLLOUT) {
+    return handle_pkt_outgoing(index, socks, hi);
+  }
+
+  return 0;
+}
+
+int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
   struct pollfd *pollfd = &socks->pollfds[index];
   int fd = pollfd->fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
@@ -203,61 +211,51 @@ int handle_req_incoming(nfds_t index, struct middfs_socks *socks) {
     return middfs_socks_remove(index, socks);
   }
 
-  /* 1. Try to deserialize buffer. 
-   * 2. If successful, call handler.
-   */
-
-  /* PACKET HANDLER  CODE -- need to separate/modularize */
-  
-  /* try to deserialize buffer */
-  /* TODO: this should be handled by packet handler. */
-  struct rsrc rsrc;
+  struct middfs_packet pkt;
   int errp = 0;
   size_t bytes_ready = buffer_used(buf_in);
 
-  /* TODO: this deserialization function is client/server dependent, so should be stored
-   * as function pointer in struct handler_info. */
-  size_t bytes_required = deserialize_rsrc(buf_in->begin, bytes_ready, &rsrc, &errp);
-    
+  size_t bytes_required = deserialize_pkt(buf_in->begin, bytes_ready, &pkt, &errp);
+  
   if (errp) {
     /* invalid data; close socket */
     return middfs_socks_remove(index, socks);
-  }	    
+  }
 
-  if (bytes_required <= bytes_ready) {
-    /* successfully deserialized packet */
-    print_rsrc(&rsrc);
+  if (bytes_required > bytes_ready) {
+    return 0;
+  }
 
-    /* remove used bytes */
-    buffer_shift(buf_in, bytes_required);
+  /* remove used bytes */
+  buffer_shift(buf_in, bytes_required);
+  
+  /* shutdown socket for incoming data */
+  if (shutdown(fd, SHUT_RD) < 0) {
+    perror("shutdown");
+    middfs_socks_remove(index, socks);
+    return -1;
+  }
 
-    /* shutdown socket for incoming data */
-    if (shutdown(fd, SHUT_RD) < 0) {
-      perror("shutdown");
-      middfs_socks_remove(index, socks);
-      return -1;
-    }
+  //// TESTING /////
+  /* TODO: This is where the handler needs to be called. */
+  struct buffer *buf_out = &sockinfo->buf_out;
+  char *text = "this is the file you were looking for\n";
 
-    //// TESTING /////
-    struct buffer *buf_out = &sockinfo->buf_out;
-    char *text = "this is the file you were looking for\n";
-
-    if (buffer_copy(buf_out, text, strlen(text) + 1) < 0) {
-      perror("buffer_copy");
-      middfs_socks_remove(index, socks);
-      return -1;
-    }
-    ///// TESTING ////
+  if (buffer_copy(buf_out, text, strlen(text) + 1) < 0) {
+    perror("buffer_copy");
+    middfs_socks_remove(index, socks);
+    return -1;
+  }
+  ///// TESTING ////
 
     
-    /* configure socket for outgoing data */
-    socks->pollfds[index].events = POLLOUT;      
-  }
+  /* configure socket for outgoing data */
+  socks->pollfds[index].events = POLLOUT;      
   
   return 0;
 }
 
-int handle_req_outgoing(nfds_t index, struct middfs_socks *socks) {
+int handle_pkt_outgoing(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
   /* TODO: implement correctly. This is just a test. */
   int fd = socks->pollfds[index].fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
@@ -277,12 +275,4 @@ int handle_req_outgoing(nfds_t index, struct middfs_socks *socks) {
   }
   
   return 0;
-}
-
-int handle_connect_event(nfds_t index, struct middfs_socks *socks) {
-  return -1; /* STUB */
-}
-
-int handle_disconnect_event(nfds_t index, struct middfs_socks *socks) {
-  return -1; /* STUB */
 }
