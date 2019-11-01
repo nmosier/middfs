@@ -145,8 +145,11 @@ int handle_socket_event(nfds_t index, struct middfs_socks *socks,
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
   switch (sockinfo->type) {
-  case MFD_PKT:
+  case MFD_PKT_IN:
     return handle_pkt_event(index, socks, hi);
+
+  case MFD_PKT_OUT:
+    abort(); /* TODO */
         
   case MFD_LSTN: /* POLLIN -- accept new client connection */
     return handle_lstn_event(index, socks);
@@ -167,7 +170,7 @@ int handle_lstn_event(nfds_t index, struct middfs_socks *socks) {
   if (revents & POLLIN) {
     if ((client_sockfd = server_accept(fd)) >= 0) {
       /* valid client connection, so add to socket list */
-      struct middfs_sockinfo sockinfo = {MFD_PKT};
+      struct middfs_sockinfo sockinfo = {MFD_PKT_IN};
       if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
 	perror("middfs_socks_add"); /* TODO -- resize should perr */
 	close(client_sockfd);

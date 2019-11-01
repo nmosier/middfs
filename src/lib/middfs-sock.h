@@ -12,7 +12,8 @@
 /* middfs_fd_e -- enum describing type of socket */
 enum middfs_socktype
   {MFD_NONE, /* None */
-   MFD_PKT, /* Client Request (client -> server) */
+   MFD_PKT_IN, /* Client Request (client -> server) */
+   MFD_PKT_OUT, /* Server Request (server- > client) */
    MFD_LSTN, /* Listening Socket (unique) */
    MFD_NTYPES /* counts number of enum types */
   };
