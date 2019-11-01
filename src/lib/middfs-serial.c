@@ -15,6 +15,7 @@
 #include "middfs-rsrc.h"
 #include "middfs-pkt.h"
 
+
 /* SERIALIZATION FUNCTIONS 
  * serialize_*:
  *   These functions shall be of the format
@@ -317,9 +318,10 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
 			 size_t nbytes) {
   uint8_t *buf_ = (uint8_t *) buf;
   size_t used = 0;
+  enum middfs_request_type type = req->mreq_type;
 
   /* serialize shared members */
-  used += serialize_enum((int *) &req->mreq_type, buf_ + used,
+  used += serialize_enum((int *) &type, buf_ + used,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf_ + used,
 			sizerem(nbytes, used));
@@ -330,43 +332,23 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   /* serialize request-specific members */
   
   /* serialize _mode_ */
-  switch (req->mreq_type) {
-  case MREQ_ACCESS:
-  case MREQ_CHMOD:
-  case MREQ_CREATE:
-  case MREQ_OPEN:
-    used += serialize_int32(&req->mreq_mode, buf_ + used,
-			    sizerem(nbytes, used));
-    break;
-    
-  default:
-    break;
+  if (req_has_mode(type)) {
+    used += serialize_int32(&req->mreq_mode, buf_ + used, sizerem(nbytes, used));
   }
 
   /* serialize _size_ */
-  switch (req->mreq_type) {
-  case MREQ_READLINK:
-  case MREQ_TRUNCATE:
-  case MREQ_READ:
-  case MREQ_WRITE:
-    used += serialize_uint64(&req->mreq_size, buf_ + used,
-			     sizerem(nbytes, used));
-    break;
-    
-  default:
-    break;
+  if (req_has_size(type)) {
+    used += serialize_uint64(&req->mreq_size, buf_ + used, sizerem(nbytes, used));
   }
 
   /* serialize _to_ */
-  switch (req->mreq_type) {
-  case MREQ_SYMLINK:
-  case MREQ_RENAME:
-    used += serialize_str(req->mreq_to, buf_ + used,
-			  sizerem(nbytes, used));
-    break;
+  if (req_has_to(type)) {
+    used += serialize_str(req->mreq_to, buf_ + used, sizerem(nbytes, used));
+  }
 
-  default:
-    break;
+  /* serilaize _off_ */
+  if (req_has_off(type)) {
+    used += serialize_uint64(&req->mreq_off, buf_ + used, sizerem(nbytes, used));
   }
   
   return used;
@@ -389,6 +371,26 @@ size_t deserialize_request(const void *buf, size_t nbytes,
 			  &req->mreq_requester, errp);
   used += deserialize_rsrc(buf_ + used, sizerem(nbytes, used),
 			   &req->mreq_rsrc, errp);
+
+  /* stop if already exceeded allowance */
+  if (used > nbytes) {
+    return used;
+  }
+  
+  /* deserialize request-specific fields */
+  enum middfs_request_type type = req->mreq_type;
+  if (req_has_mode(type)) {
+    used += deserialize_int32(buf_ + used, sizerem(nbytes, used), &req->mreq_mode, errp);
+  }
+  if (req_has_size(type)) {
+    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_size, errp);
+  }
+  if (req_has_to(type)) {
+    used += deserialize_str(buf_ + used, sizerem(nbytes, used), req->mreq_to, errp);
+  }
+  if (req_has_off(type)) {
+    used += deserialize_str(buf_ + used, sizerem(nbytes, used), &req->mreq_off, errp);
+  }
 
   return *errp ? 0 : used;
 }
