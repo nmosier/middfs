@@ -10,7 +10,7 @@
 #include "middfs-serial.h"
 
 /* Handler function type */
-typedef int (*handler_f)(const void *in, void *out);
+typedef int (*handler_f)(const struct middfs_packet *in, struct middfs_packet *out);
 
 /* struct handler_info -- this contains all the information that the middfs Connection Manager
  * needs to handle incoming data. This generally involves

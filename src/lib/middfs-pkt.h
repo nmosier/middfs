@@ -17,6 +17,7 @@ enum middfs_packet_type
    MPKT_CONNECT,
    MPKT_DISCONNECT,
    MPKT_REQUEST,
+   MPKT_RESPONSE, /* TODO: Write response */
    MPKT_NTYPES /* counts number of types */
   };
 

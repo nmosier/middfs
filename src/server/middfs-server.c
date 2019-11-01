@@ -78,3 +78,14 @@ int main(int argc, char *argv[]) {
 
   return exitno;
 }
+
+
+/* TODO */
+int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out) {
+  struct buffer *buf_out = &sockinfo->buf_out;
+  char *text = "this is the file you were looking for\n";
+
+  if (buffer_copy(buf_out, text, strlen(text) + 1) < 0) {
+    return -1;
+  }
+}
