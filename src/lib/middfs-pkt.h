@@ -41,7 +41,6 @@ enum middfs_request_type
    MREQ_NTYPES /* counts number of types */
   };
 
-
 /* TODO:  write serializer & deserializer for these structs */
 struct middfs_request {
   enum middfs_request_type mreq_type;
@@ -54,9 +53,14 @@ struct middfs_request {
   int mreq_mode;    /* access, chmod, create, open */
   size_t mreq_size; /* readlink, truncate, read, write */
   char *mreq_to;    /* symlink, rename */
-
+  size_t mreq_off;  /* read, write */
+  
   /* (none): getattr, unlink, getattr, rmdir, readdir */
 };
+bool req_has_mode(enum middfs_request_type type);
+bool req_has_size(enum middfs_request_type type);
+bool req_has_to(enum middfs_request_type type);
+bool req_has_off(enum middfs_request_type type);
 
 struct middfs_connect {
   /* TODO: stub */
