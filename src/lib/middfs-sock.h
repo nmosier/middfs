@@ -26,6 +26,8 @@ struct middfs_sockinfo {
 
   struct buffer buf_in;  /* buffer for incoming data */
   struct buffer buf_out; /* buffer for outgoing data */
+
+  int resp_fd; /* fd of socket to which to send response */
 };
 
 struct middfs_socks {
