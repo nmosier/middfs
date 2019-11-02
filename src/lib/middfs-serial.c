@@ -415,7 +415,8 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
   default:
-    abort();
+    /* TODO -- there aren't any fields to deserialize yet. */
+    break;
   }
  
   return used;
@@ -448,7 +449,8 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
   default:
-    abort();
+    /* TODO -- there aren't any fields to deserialize yet. */
+    break;
   }
 
   return *errp ? 0 : used;
