@@ -443,37 +443,25 @@ static int middfs_read(const char *path, char *buf, size_t size,
   }
   
   /* serialize request */
-  struct middfs_request req =
-    {.mreq_type = MREQ_READ,
-     .mreq_requester = strdup("nicholas"),
-     .mreq_rsrc = client_rsrc->mr_rsrc,
-     .mreq_size = 4096,
+  
+  struct middfs_packet pkt =
+    {.mpkt_magic = MPKT_MAGIC,
+     .mpkt_type = MPKT_REQUEST,
+     .mpkt_un = {
+		 .mpkt_request = 
+		 {.mreq_type = MREQ_READ,
+		  .mreq_requester = strdup("nicholas"),
+		  .mreq_rsrc = client_rsrc->mr_rsrc,
+		  .mreq_size = 4096
+		 }
+      }
     };
 
+		 
   char buf_[BUFSIZE];
-  #if OLDTEST
-  if ((used = serialize_request(&req, buf_, BUFSIZE)) > BUFSIZE) {
-    fprintf(stderr, "serialize_request: not enough bytes");
-    goto cleanup;
-  }
-
-  /* send request */
-  ssize_t bytes_written;
-  char *bufptr = buf_;
-  while (used > 0) {
-    if ((bytes_written = write(clientfd, bufptr, used)) < 0) {
-      perror("write");
-      goto cleanup;
-    }
-
-    bufptr += bytes_written;
-    used -= bytes_written;
-  }
-
-#else
   struct buffer buf_out = {0};
 
-  if (buffer_serialize(&req, (serialize_f) serialize_request, &buf_out) < 0) {
+  if (buffer_serialize(&pkt, (serialize_f) serialize_pkt, &buf_out) < 0) {
     perror("buffer_serialize");
     goto cleanup;
   }
@@ -483,8 +471,6 @@ static int middfs_read(const char *path, char *buf, size_t size,
     perror("buffer_write");
     goto cleanup;
   }
-  
-#endif
   
   /* shutdown for sending */
   if (shutdown(clientfd, SHUT_WR) < 0) {
@@ -502,6 +488,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
   }
   if (bytes_read < 0) {
     perror("read");
+    fprintf(stderr, "bytes read: %zu\n", bytes_read);
     goto cleanup;
   }
 

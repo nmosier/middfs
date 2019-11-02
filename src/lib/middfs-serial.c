@@ -409,6 +409,8 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
   case MPKT_REQUEST:
     used += serialize_request(&pkt->mpkt_un.mpkt_request,
 			      buf_ + used, sizerem(nbytes, used));
+    break;
+    
   case MPKT_CONNECT:
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
@@ -440,6 +442,8 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   case MPKT_REQUEST:
     used += deserialize_request(buf_ + used, sizerem(nbytes, used),
 				&pkt->mpkt_un.mpkt_request, errp);
+    break;
+    
   case MPKT_CONNECT:
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
