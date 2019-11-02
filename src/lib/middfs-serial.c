@@ -386,10 +386,10 @@ size_t deserialize_request(const void *buf, size_t nbytes,
     used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_size, errp);
   }
   if (req_has_to(type)) {
-    used += deserialize_str(buf_ + used, sizerem(nbytes, used), req->mreq_to, errp);
+    used += deserialize_str(buf_ + used, sizerem(nbytes, used), &req->mreq_to, errp);
   }
   if (req_has_off(type)) {
-    used += deserialize_str(buf_ + used, sizerem(nbytes, used), &req->mreq_off, errp);
+    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_off, errp);
   }
 
   return *errp ? 0 : used;
