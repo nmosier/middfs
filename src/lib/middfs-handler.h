@@ -9,6 +9,13 @@
 
 #include "middfs-serial.h"
 
+/* Handler function return value enum */
+enum handler_e {
+   HANDLE_ERR = -1, /* An error has occurred during handling of packet. */
+   HANDLE_FIN,      /* Handling of the packet is complete and _out_ packet should be sent back. */
+   HANDLE_FWD,     /* Waiting on pending response*/
+};
+
 /* Handler function type */
 typedef int (*handler_f)(const struct middfs_packet *in, struct middfs_packet *out);
 
@@ -25,7 +32,8 @@ typedef int (*handler_f)(const struct middfs_packet *in, struct middfs_packet *o
  */ 
 struct handler_info {
   /* function pointer that handles the value deserialized by _in_deserial_*/
-  handler_f handler;
+   handler_f handle_in;
+   handler_f handle_out;
 };
 
 #endif

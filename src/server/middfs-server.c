@@ -12,6 +12,8 @@
 #include "middfs-rsrc.h"
 #include "middfs-util.h"
 
+static int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out);
+
 int main(int argc, char *argv[]) {
   int exitno = 0;
   char *listen_port = LISTEN_PORT_DEFAULT_STR;
@@ -67,7 +69,7 @@ int main(int argc, char *argv[]) {
 
   /* call server loop */
   struct handler_info hi =
-    {.handler = NULL}; /* TODO */
+     {.handle_in = server_handle_pkt};
   
   while (server_loop(&socks, &hi) >= 0) {}
   
@@ -80,12 +82,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-/* TODO */
-int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out) {
-
-  
+static int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out) {
   *out = *in;
   return 0;
-
-  
 }

@@ -74,3 +74,16 @@ Each entry in this list should contain the following information:
  1. Client username.
  2. Client IP.
 [3. Client listening port?]
+
+
+~~~~~~~~~~~~~~~~
+
+MODIFICATION OF SOCKET ARRAY TO HANDLE FORWARDING
+
+* Each sockinfo entry will have two fd entries: one fd for the original request, and a second
+  fd for the forwarded request.
+* An special enum will track the state of the entry, determining which polling flags should be set.
+* The pollfds array will now be regenerated each time from the sockinfo array.
+
+
+

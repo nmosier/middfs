@@ -141,7 +141,7 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
 }
 
 int handle_socket_event(nfds_t index, struct middfs_socks *socks,
-			const struct handler_info *hi) {
+                        const struct handler_info *hi) {
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
   switch (sockinfo->type) {
@@ -172,9 +172,9 @@ int handle_lstn_event(nfds_t index, struct middfs_socks *socks) {
       /* valid client connection, so add to socket list */
       struct middfs_sockinfo sockinfo = {MFD_PKT_IN};
       if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
-	perror("middfs_socks_add"); /* TODO -- resize should perr */
-	close(client_sockfd);
-	return -1;
+         perror("middfs_socks_add");
+         close(client_sockfd);
+         return -1;
       }
     }
   }
@@ -214,11 +214,10 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
     return middfs_socks_remove(index, socks);
   }
 
-  struct middfs_packet pkt;
+  struct middfs_packet in_pkt;
   int errp = 0;
   size_t bytes_ready = buffer_used(buf_in);
-
-  size_t bytes_required = deserialize_pkt(buf_in->begin, bytes_ready, &pkt, &errp);
+  size_t bytes_required = deserialize_pkt(buf_in->begin, bytes_ready, &in_pkt, &errp);
   
   if (errp) {
     /* invalid data; close socket */
@@ -229,6 +228,8 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
     return 0;
   }
 
+  /* incoming packet has been successfully deserialized */
+  
   /* remove used bytes */
   buffer_shift(buf_in, bytes_required);
   
@@ -239,6 +240,10 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
     return -1;
   }
 
+#if USE_HANDLER
+  struct middfs_packet out_pkt;
+  hi->handle_in(&in_pkt, &out_pkt);
+#else
   //// TESTING /////
   /* TODO: This is where the handler needs to be called. */
   struct buffer *buf_out = &sockinfo->buf_out;
@@ -250,7 +255,7 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
     return -1;
   }
   ///// TESTING ////
-
+#endif
     
   /* configure socket for outgoing data */
   socks->pollfds[index].events = POLLOUT;      
