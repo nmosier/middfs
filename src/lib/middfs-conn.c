@@ -259,10 +259,10 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
 }
 
 int handle_pkt_outgoing(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
-  /* TODO: implement correctly. This is just a test. */
   int fd = socks->pollfds[index].fd;
   struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
   struct buffer *buf_out = &sockinfo->buf_out;
+  int retv = 0;
 
   ssize_t bytes_written = buffer_write(fd, buf_out);
 
@@ -270,12 +270,16 @@ int handle_pkt_outgoing(nfds_t index, struct middfs_socks *socks, const struct h
     /* error */
     perror("buffer_write");
     middfs_socks_remove(index, socks);
-    return -1;
+    retv = -1;
   }
   if (bytes_written == 0) {
-    /* all of bytes written */
-    middfs_socks_remove(index, socks);
+     /* all of bytes written */
+     if (shutdown(fd, SHUT_WR) < 0) {
+        perror("shutdown");
+        retv = -1;
+     }
+     middfs_socks_remove(index, socks);
   }
   
-  return 0;
+  return retv;
 }
