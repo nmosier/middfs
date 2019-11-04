@@ -18,6 +18,17 @@ enum middfs_socktype
    MFD_NTYPES /* counts number of enum types */
   };
 
+enum middfs_sockstate
+  {MSS_NONE,
+   MSS_CLOSED,
+   MSS_LSTN,
+   MSS_REQRD,
+   MSS_RSPWR,
+   MSS_REQFWD,
+   MSS_RSPFWD,
+   MSS_NTYPES
+  };
+
 struct middfs_sockend {
   int fd;
   struct buffer buf;
@@ -31,6 +42,7 @@ struct middfs_sockend {
  * for future extendability. */
 struct middfs_sockinfo {
   enum middfs_socktype type;
+  enum middfs_sockstate state;
 
   struct middfs_sockend in;
   struct middfs_sockend out;

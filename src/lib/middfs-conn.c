@@ -163,7 +163,7 @@ enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struc
    if (middfs_sockinfo_isopen(sockinfo)) {
       switch (sockinfo->type) {
       case MFD_PKT_IN:
-         return handle_pkt_event(sockinfo, hi, new_sockinfo);
+	return handle_pkt_event(sockinfo, hi);
          
       case MFD_PKT_OUT:
          abort(); /* TODO */
@@ -200,28 +200,43 @@ enum handler_e handle_lstn_event(struct middfs_sockinfo *sockinfo, const struct 
   return HS_SUC;
 }
 
-enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-				struct middfs_sockinfo *new_sockinfo) {
+enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi) {
   int revents = sockinfo->revents;
 
-  if (revents & POLLIN) {
-    return handle_pkt_incoming(sockinfo, hi, new_sockinfo);
-  }
-  if (revents & POLLOUT) {
-    return handle_pkt_outgoing(sockinfo, hi, new_sockinfo);
-  }
+  if (revents) {
+    switch (sockinfo->state) {
+    case MSS_REQRD:
+      return handle_pkt_reqrd(sockinfo, hi);
+      
+    case MSS_RSPWR:
+      return handle_pkt_rspwr(sockinfo, hi);
+      
+    case MSS_REQFWD:
+      /* TODO */
+      abort();
 
+    case MSS_RSPFWD:
+      /* TODO */
+      abort();
+
+    case MSS_LSTN:
+    case MSS_CLOSED:
+    case MSS_NONE:
+    default:
+      abort();
+    }
+  }
+  
   return 0;
 }
 
-/* Called when POLLIN set -- function name should indicate this 
- * TODO */
-enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-				   struct middfs_sockinfo *new_sockinfo) {
+enum handler_e handle_pkt_reqrd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi) {
   struct middfs_sockend *in = &sockinfo->in;
   int fd = in->fd;
   struct buffer *buf_in = &in->buf;
   ssize_t bytes_read;
+
+  assert(sockinfo->revents & POLLIN);
 
   /* read bytes into buffer */
   bytes_read = buffer_read(fd, buf_in);
@@ -261,14 +276,12 @@ enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struc
     return HS_DEL;
   }
 
-  /* TODO: This logic shoud be improved. Add transition function. */
-
   /* Signal that data should now be exclusively written out. */
+  sockinfo->state = MSS_RSPWR; /* new state: write response */
   sockinfo->out.fd = sockinfo->in.fd;
-  sockinfo->in.fd = -1; 
+  sockinfo->in.fd = -1;
 
   //// TESTING /////
-  /* TODO: This is where the handler needs to be called. */
   struct buffer *buf_out = &sockinfo->out.buf;
   char *text = "this is the file you were looking for\n";
 
@@ -281,11 +294,13 @@ enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struc
   return HS_SUC;
 }
 
-enum handler_e handle_pkt_outgoing(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-			struct middfs_sockinfo *new_sockinfo) {
+
+enum handler_e handle_pkt_rspwr(struct middfs_sockinfo *sockinfo, const struct handler_info *hi) {
   int fd = sockinfo->out.fd;
   struct buffer *buf_out = &sockinfo->out.buf;
 
+  assert(sockinfo->revents & POLLOUT);
+  
   ssize_t bytes_written = buffer_write(fd, buf_out);
   if (bytes_written < 0) {
     /* error */

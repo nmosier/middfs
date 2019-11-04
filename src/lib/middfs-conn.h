@@ -21,12 +21,9 @@ enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struc
 				   struct middfs_sockinfo *new_sockinfo);
 enum handler_e handle_lstn_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
 				 struct middfs_sockinfo *new_sockinfo);
-enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-				struct middfs_sockinfo *new_sockinfo);
-enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-				   struct middfs_sockinfo *new_sockinfo);
-enum handler_e handle_pkt_outgoing(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
-				   struct middfs_sockinfo *new_sockinfo);
+enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
+enum handler_e handle_pkt_reqrd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
+enum handler_e handle_pkt_rspwr(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
 
 #endif
 
