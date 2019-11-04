@@ -39,7 +39,6 @@ struct middfs_sockinfo {
 };
 
 struct middfs_socks {
-  struct pollfd *pollfds;
   struct middfs_sockinfo *sockinfos;
   int count;
   int len;
@@ -51,7 +50,7 @@ int middfs_sockinfo_delete(struct middfs_sockinfo *info);
 int middfs_sockinfo_checkfds(struct pollfd *pfds, int *nfds_checked,
 			     struct middfs_sockinfo *info);
 
-int middfs_socks_init(struct middfs_socks *socks);
+void middfs_socks_init(struct middfs_socks *socks);
 int middfs_socks_delete(struct middfs_socks *socks);
 int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks);
 int middfs_socks_add(const struct middfs_sockinfo *sockinfo,
@@ -82,5 +81,10 @@ int middfs_sockend_check(struct middfs_sockend *sockend);
 int middfs_sockinfo_check(struct middfs_sockinfo *info);
 int middfs_socks_check(struct middfs_socks *socks);
 
+
+bool middfs_sockend_isopen(const struct middfs_sockend *sockend);
+bool middfs_sockinfo_isopen(const struct middfs_sockinfo *sockinfo);
+
+void middfs_sockinfo_move(struct middfs_sockinfo *dst, struct middfs_sockinfo *src);
 
 #endif

@@ -110,69 +110,39 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
     return -1;
   }
 
-  /* iterate through sockets and handle events */
-  for (int i = 0; i < socks->count; ++i) {
-    struct middfs_sockinfo *info = &socks->sockinfos[i];
-    int revents = info->revents;
-
-    /* remove socket if error occured */
-    if (revents & (POLLERR | POLLHUP)) {
-      if (middfs_socks_remove(i, socks) < 0) {
-	return -1;
-      }
-      continue;
-    }
-
-    /* TODO -- handle socket event */
-  }
-
-
-  
   for (int index = 0; index < socks->count; ++index) {
 
+     struct middfs_sockinfo new_sockinfo;
+     enum handler_e status = handle_socket_event(&socks->sockinfos[index], hi, &new_sockinfo);
+
+     switch (status) {
+     case HS_SUC:
+        break;
+      
+     case HS_NEW: /* Add new socket to list */
+        if (middfs_socks_add(&new_sockinfo, socks) < 0) {
+           perror("middfs_socks_add");
+           if (middfs_sockinfo_delete(&new_sockinfo) < 0) {
+              perror("middfs_sockinfo_delete");
+           }
+           return -1;
+        }
+        break;
+      
+     case HS_DEL: /* Remove socket */
+        if (middfs_socks_remove(index, socks) < 0) {
+           perror("middfs_socks_remove");
+           return -1;
+        }
+        break;
+      
+     case HS_ERR:
+     default:
+        perror("handle_socket_event");
+        return -1;
+     }
     
-    int revents = socks->pollfds[index].revents;
-
-    /* remove socket if error occurred */
-    if (revents & (POLLERR | POLLHUP)) {
-      if (middfs_socks_remove(index, socks) < 0) {
-	return -1;
-      }
-      --index;
-      continue;
-    }
-
-    struct middfs_sockinfo new_sockinfo;
-    enum handler_e status = handle_socket_event(&socks->sockinfos[index], hi, &new_sockinfo);
-
-    switch (status) {
-    case HS_SUC:
-      break;
-      
-    case HS_NEW: /* Add new socket to list */
-      if (middfs_socks_add(&new_sockinfo, socks) < 0) {
-	perror("middfs_socks_add");
-	if (middfs_sockinfo_delete(&new_sockinfo) < 0) {
-	  perror("middfs_sockinfo_delete");
-	}
-	return -1;
-      }
-      break;
-      
-    case HS_DEL: /* Remove socket */
-      if (middfs_socks_remove(index, socks) < 0) {
-	perror("middfs_socks_remove");
-	return -1;
-      }
-      break;
-      
-    case HS_ERR:
-    default:
-      perror("handle_socket_event");
-      return -1;
-    }
-    
-    fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
+     fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
   }
   
   return retv;
@@ -189,20 +159,23 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
  */
 enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
 				   struct middfs_sockinfo *new_sockinfo) {
-  switch (sockinfo->type) {
-  case MFD_PKT_IN:
-    return handle_pkt_event(sockinfo, hi, new_sockinfo);
 
-  case MFD_PKT_OUT:
-    abort(); /* TODO */
+   if (middfs_sockinfo_isopen(sockinfo)) {
+      switch (sockinfo->type) {
+      case MFD_PKT_IN:
+         return handle_pkt_event(sockinfo, hi, new_sockinfo);
+         
+      case MFD_PKT_OUT:
+         abort(); /* TODO */
         
-  case MFD_LSTN: /* POLLIN -- accept new client connection */
-    return handle_lstn_event(sockinfo, hi, new_sockinfo);
+      case MFD_LSTN: /* POLLIN -- accept new client connection */
+         return handle_lstn_event(sockinfo, hi, new_sockinfo);
     
-  case MFD_NONE:
-  default:
-    abort();
-  }
+      case MFD_NONE:
+      default:
+         abort();
+      }
+   }
 
   return 0;  
 }

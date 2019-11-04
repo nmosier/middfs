@@ -53,11 +53,7 @@ int main(int argc, char *argv[]) {
 
   /* initialize socket list to poll on */
   struct middfs_socks socks;
-  if (middfs_socks_init(&socks) < 0) {
-    exitno = 3;
-    close(servfd);
-    return 3;
-  }
+  middfs_socks_init(&socks);
 
   /* add server listening socket to socket list to poll */
   //  struct middfs_sockinfo serv_sockinfo = {MFD_LSTN};

@@ -19,9 +19,10 @@
  *  - socks: pointer to socket struct to be initialized 
  * RETV: 0 on success; -1 on error
  */
-int middfs_socks_init(struct middfs_socks *socks) {
-  memset(socks, 0, sizeof(*socks));
-  return 0;
+void middfs_socks_init(struct middfs_socks *socks) {
+   socks->sockinfos = NULL;
+   socks->count = 0;
+   socks->len = 0;
 }
 
 /* middfs_socks_delete() -- destroy a socket list
@@ -33,13 +34,12 @@ int middfs_socks_delete(struct middfs_socks *socks) {
   int retv = 0;
 
   /* close any open sockets */
-  for (nfds_t i = 0; i < socks->count; ++i) {
+  for (int i = 0; i < socks->count; ++i) {
     if (middfs_socks_remove(i, socks) < 0) {
       retv = -1;
     }
   }
   
-  free(socks->pollfds);
   free(socks->sockinfos);
   
   return retv;
@@ -53,13 +53,6 @@ int middfs_socks_delete(struct middfs_socks *socks) {
  */
 int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
   void *ptr;
-
-  /* realloc pollfds array */
-  if ((ptr = realloc(socks->pollfds,
-		     newlen * sizeof(*socks->pollfds))) == NULL) {
-    return -1;
-  }
-  socks->pollfds = ptr;
 
   /* realloc sockinfos array */
   if ((ptr = realloc(socks->sockinfos,
@@ -75,11 +68,9 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
 
 
 int middfs_socks_add(const struct middfs_sockinfo *sockinfo, struct middfs_socks *socks) {
-
   /* resize if necessary */
   if (socks->count == socks->len) {
     nfds_t new_len = MAX(2 * socks->len, 16);
-    
     if (middfs_socks_resize(new_len, socks) < 0) {
       return -1;
     }
@@ -95,21 +86,9 @@ int middfs_socks_remove(nfds_t index, struct middfs_socks *socks) {
   int retv = 0;
   
   assert(index < socks->count);
-  
-  int *fdp = &socks->pollfds[index].fd;
-  
-  if (*fdp < 0) {
-    errno = ENOTCONN;
-    return -1;
-  }
-  
-  if (close(*fdp) < 0) {
-    return -1;
-  }
 
-  *fdp = -1; /* mark as deleted */
   if (middfs_sockinfo_delete(&socks->sockinfos[index]) < 0) {
-    retv = -1;
+     retv = -1;
   }
 
   return retv;
@@ -122,34 +101,25 @@ int middfs_socks_remove(nfds_t index, struct middfs_socks *socks) {
  */
 int middfs_socks_pack(struct middfs_socks *socks) {
   int nopen = 0;
-  
+
   for (int closed_index = 0; closed_index < socks->count; ++closed_index) {
-    if (socks->pollfds[closed_index].fd < 0) { /* if current entry is closed, try to fill it with open socket */
-      
-      for (int open_index = closed_index + 1;
-	   open_index < socks->count; ++open_index) {
-	
-	if (socks->pollfds[open_index].fd >= 0) {
-	  
-	  /* copy this entry (an open socket) to fill the gap of
-	   * the closed socket (which we no longer care about) */
-	  memcpy(&socks->pollfds[closed_index], &socks->pollfds[open_index],
-		 sizeof(socks->pollfds[closed_index]));
-	  memcpy(&socks->sockinfos[closed_index], &socks->sockinfos[open_index],
-		 sizeof(socks->sockinfos[closed_index]));
 
-	  /* mark entry at open_index as invalid 
-	   * (to avoid duplication) */
-	  socks->pollfds[open_index].fd = -1;
+     if (!middfs_sockinfo_isopen(&socks->sockinfos[closed_index])) {
 
-	  break;
-	}
+        for (int open_index = closed_index + 1; open_index < socks->count; ++open_index) {
+
+           if (middfs_sockinfo_isopen(&socks->sockinfos[open_index])) {
+              middfs_sockinfo_move(&socks->sockinfos[closed_index], &socks->sockinfos[open_index]);
+              break;
+           }
 	
-      }
-      
+        }
     } else {
+        
       ++nopen;
+      
     }
+     
   }
 
   socks->count = nopen;
@@ -327,19 +297,29 @@ void middfs_sockend_init(int fd, struct middfs_sockend *sockend) {
 
 int middfs_sockend_delete(struct middfs_sockend *sockend) {
   buffer_delete(&sockend->buf);
-  if (sockend->fd >= 0 && close(sockend->fd) < 0) {
-    return -1;
+  if (sockend->fd >= 0) {
+     int fd = sockend->fd;
+     sockend->fd = -1;
+     if (close(fd) < 0) {
+        return -1;
+     }
   }
   return 0;
 }
 
 int middfs_sockend_check(struct middfs_sockend *sockend) {
-  int revents = *sockend->revents;
+   int revents;
+   int fd = sockend->fd;
+   
+  if (fd < 0) {
+     return 0; /* ignore */
+  }
 
+  revents = *sockend->revents;  
+  
   if (revents & POLLERR) {
     return -1;
   } else if (revents & POLLHUP) {
-    int fd = sockend->fd;
     sockend->fd = -1;
     if (close(fd) < 0) {
       perror("close");
@@ -369,13 +349,30 @@ int middfs_sockend_pollfd(struct pollfd *pfds, int nfds, int polarity,
   }
   
   if (sockend->fd >= 0) {
+    nfds_used = 1;     
     if (nfds > 0) {
       pfds->fd = sockend->fd;
       pfds->events = polarity & (POLLIN | POLLOUT);
       sockend->revents = &pfds->revents;
-      nfds_used = 1;
     }
   }
   
   return nfds_used;
+}
+
+
+bool middfs_sockend_isopen(const struct middfs_sockend *sockend) {
+   return sockend->fd >= 0;
+}
+
+bool middfs_sockinfo_isopen(const struct middfs_sockinfo *sockinfo) {
+   return middfs_sockend_isopen(&sockinfo->in) || middfs_sockend_isopen(&sockinfo->out);
+}
+
+
+void middfs_sockinfo_move(struct middfs_sockinfo *dst, struct middfs_sockinfo *src) {
+   *dst = *src;
+   if (dst != src) {
+      middfs_sockinfo_init(MFD_NONE, -1, -1, src); /* initialize to ``closed'' sockinfo struct */
+   }
 }
