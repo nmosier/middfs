@@ -102,7 +102,7 @@ size_t serialize_enum(int *e, void *buf,
 size_t deserialize_enum(const void *buf, size_t nbytes,
 			int *enump, int *errp);
 
-
-
+size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes);
+size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *rsp, int *errp);
 
 #endif

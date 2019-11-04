@@ -63,6 +63,12 @@ bool req_has_size(enum middfs_request_type type);
 bool req_has_to(enum middfs_request_type type);
 bool req_has_off(enum middfs_request_type type);
 
+/* TODO: response will definintely need to be changes in the future. */
+struct middfs_response {
+   size_t nbytes;
+   void *data;
+};
+
 struct middfs_connect {
   /* TODO: stub */
   int dummy;
@@ -78,6 +84,7 @@ struct middfs_packet {
   enum middfs_packet_type mpkt_type;
   union {
     struct middfs_request mpkt_request;
+     struct middfs_response mpkt_response;
     struct middfs_connect mpkt_connect;
     struct middfs_disconnect mpk_disconnect;
   } mpkt_un;

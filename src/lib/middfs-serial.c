@@ -410,6 +410,10 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
     used += serialize_request(&pkt->mpkt_un.mpkt_request,
 			      buf_ + used, sizerem(nbytes, used));
     break;
+
+  case MPKT_RESPONSE:
+     used += serialize_rsp(&pkt->mpkt_un.mpkt_response, buf_ + used, sizerem(nbytes, used));
+     break;
     
   case MPKT_CONNECT:
   case MPKT_DISCONNECT:
@@ -429,30 +433,34 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   const uint8_t *buf_ = (const void *) buf;
   size_t used = 0;
   
-  /* bail on previous error */
   if (*errp) {
     return 0;
   }
   
   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used),
-			     &pkt->mpkt_magic, errp);
+                             &pkt->mpkt_magic, errp);
   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used),
-			     (uint32_t *) &pkt->mpkt_type, errp);
+                             (uint32_t *) &pkt->mpkt_type, errp);
   
   switch (pkt->mpkt_type) {
   case MPKT_REQUEST:
-    used += deserialize_request(buf_ + used, sizerem(nbytes, used),
-				&pkt->mpkt_un.mpkt_request, errp);
-    break;
+     used += deserialize_request(buf_ + used, sizerem(nbytes, used),
+                                 &pkt->mpkt_un.mpkt_request, errp);
+     break;
+
+  case MPKT_RESPONSE:
+     used += deserialize_rsp(buf_ + used, sizerem(nbytes, used),
+                             &pkt->mpkt_un.mpkt_response, errp);
+     break;
     
   case MPKT_CONNECT:
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
   default:
-    /* TODO -- there aren't any fields to deserialize yet. */
-    break;
+     /* TODO -- there aren't any fields to deserialize yet. */
+     break;
   }
-
+  
   return *errp ? 0 : used;
 }
 
@@ -505,3 +513,35 @@ size_t deserialize_int64(const void *buf, size_t nbytes,
   return deserialize_uint64(buf, nbytes, (uint64_t *) int64, errp);
 }
 
+
+size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes) {
+   uint8_t *buf_ = (uint8_t *) buf;
+   size_t used = 0;
+
+   used += serialize_uint64(&rsp->nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
+   if (rsp->nbytes <= sizerem(nbytes, used)) {
+      memcpy(buf_ + used, rsp->data, rsp->nbytes);
+   }
+   used += rsp->nbytes;
+
+   return used;
+}
+
+size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *rsp, int *errp) {
+   const uint8_t *buf_ = (const uint8_t *) buf;
+   size_t used = 0;
+   
+   used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &rsp->nbytes, errp);
+
+   if (*errp == 0) {
+      if ((rsp->data = malloc(rsp->nbytes)) == NULL) {
+         *errp = -1;
+         return 0;
+      }
+      
+      memcpy(rsp->data, buf_ + used, rsp->nbytes);
+   }
+   used += rsp->nbytes;
+
+   return used;
+}
