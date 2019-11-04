@@ -533,14 +533,15 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
    
    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &rsp->nbytes, errp);
 
-   if (*errp == 0) {
-      if (rsp->nbytes > 0) {
-         if ((rsp->data = malloc(rsp->nbytes)) == NULL) {
-            *errp = -1;
-            return 0;
-         }
-         memcpy(rsp->data, buf_ + used, rsp->nbytes);         
+   /* NOTE: The double comparison of sizerem() is necessary, as rsp->nbytes will only be valid
+    * when sizerem() > 0. */
+   if (*errp == 0 && sizerem(nbytes, used) >= 0 && sizerem(nbytes, used) >= &rsp->nbytes
+       && rsp->nbytes > 0) {
+      if ((rsp->data = malloc(rsp->nbytes)) == NULL) {
+         *errp = -1;
+         return 0;
       }
+      memcpy(rsp->data, buf_ + used, rsp->nbytes);         
    }
    used += rsp->nbytes;
 
