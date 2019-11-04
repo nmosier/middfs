@@ -402,7 +402,7 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
   
   used += serialize_uint32(&pkt->mpkt_magic, buf_ + used,
 			   sizerem(nbytes, used));
-  used += serialize_enum((int *) &pkt->mpkt_type, buf_ + used,
+  used += serialize_uint32(&pkt->mpkt_type, buf_ + used,
 			   sizerem(nbytes, used));
   
   switch (pkt->mpkt_type) {
