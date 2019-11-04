@@ -321,7 +321,7 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   enum middfs_request_type type = req->mreq_type;
 
   /* serialize shared members */
-  used += serialize_enum((int *) &type, buf_ + used,
+  used += serialize_uint32(&type, buf_ + used,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf_ + used,
 			sizerem(nbytes, used));
