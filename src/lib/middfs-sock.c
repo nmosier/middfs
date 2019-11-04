@@ -204,6 +204,20 @@ int middfs_socks_poll(struct middfs_socks *socks) {
 int middfs_sockinfo_init(enum middfs_socktype type, int fd_in, int fd_out,
 			 struct middfs_sockinfo *info) {
   info->type = type;
+  switch (type) {
+  case MFD_NONE:
+     info->state = MSS_NONE;
+     break;
+  case MFD_PKT_IN:
+     info->state = MSS_REQRD;
+     break;
+  case MFD_LSTN:
+     info->state = MSS_LSTN;
+     break;
+  case MFD_PKT_OUT:
+  default:
+     abort();
+  }
   middfs_sockend_init(fd_in, &info->in);
   middfs_sockend_init(fd_out, &info->out);
   return 0;
@@ -234,9 +248,15 @@ size_t middfs_sockinfo_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_s
     return 0;
   }
 
-  used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLIN, &info->in, errp);
-  used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLOUT, &info->out, errp);
+  enum middfs_sockstate st = info->state;
 
+  if (st == MSS_LSTN || st == MSS_REQRD || st == MSS_RSPFWD) {
+     used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLIN, &info->in, errp);
+  }
+  if (st == MSS_RSPWR || st == MSS_REQFWD) {
+     used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLOUT, &info->out, errp);
+  }
+  
   return used;
 }
 
@@ -251,8 +271,16 @@ size_t middfs_sockinfo_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_s
  *       then only one will be processed. The others will be caught with the next poll(2). 
  */
 int middfs_sockinfo_check(struct middfs_sockinfo *info) {
-  int revents_in = middfs_sockend_check(&info->in);
-  int revents_out = middfs_sockend_check(&info->out);
+   enum middfs_sockstate st = info->state;
+   int revents_in = 0;
+   int revents_out = 0;
+
+   if (st == MSS_LSTN || st == MSS_REQRD || st == MSS_RSPFWD) {
+      revents_in = middfs_sockend_check(&info->in);
+   }
+   if (st == MSS_RSPWR || st == MSS_REQFWD) {
+      revents_out = middfs_sockend_check(&info->out);
+   }
   
   if (revents_in < 0 || revents_out < 0) {
     return -1;
@@ -320,14 +348,15 @@ int middfs_sockend_check(struct middfs_sockend *sockend) {
   if (revents & POLLERR) {
     return -1;
   } else if (revents & POLLHUP) {
-    sockend->fd = -1;
-    if (close(fd) < 0) {
-      perror("close");
+     fprintf(stderr, "warning: socket %d disconnected\n", sockend->fd);
+     sockend->fd = -1;
+     if (close(fd) < 0) {
+        perror("close");
       return -1;
-    }
-    return 0;
+     }
+     return 0;
   } else {
-    return revents;
+     return revents;
   }
 }
 
@@ -347,14 +376,14 @@ int middfs_sockend_pollfd(struct pollfd *pfds, int nfds, int polarity,
   if (*errp) {
     return 0;
   }
-  
-  if (sockend->fd >= 0) {
-    nfds_used = 1;     
-    if (nfds > 0) {
-      pfds->fd = sockend->fd;
-      pfds->events = polarity & (POLLIN | POLLOUT);
-      sockend->revents = &pfds->revents;
-    }
+
+  assert(sockend->fd >= 0);
+
+  nfds_used = 1;     
+  if (nfds > 0) {
+     pfds->fd = sockend->fd;
+     pfds->events = polarity & (POLLIN | POLLOUT);
+     sockend->revents = &pfds->revents;
   }
   
   return nfds_used;

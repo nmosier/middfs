@@ -9,9 +9,13 @@
 #include "middfs-util.h"
 #include "middfs-handler.h"
 
+#define SHOULD_RSPWR 1
+
 #define LISTEN_PORT_DEFAULT 4321
 #define LISTEN_PORT_DEFAULT_STR TOSTRING(LISTEN_PORT_DEFAULT)
 
+
+#define CLIENTB "140.233.167.124" // nmosier's MacBook
 
 int server_start(const char *port, int backlog);
 int server_accept(int servfd);
@@ -22,8 +26,10 @@ enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struc
 enum handler_e handle_lstn_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
 				 struct middfs_sockinfo *new_sockinfo);
 enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
-enum handler_e handle_pkt_reqrd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
 enum handler_e handle_pkt_rspwr(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
+enum handler_e handle_pkt_reqfwd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
+enum handler_e handle_pkt_reqrd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
+enum handler_e handle_pkt_rspfwd(struct middfs_sockinfo *sockinfo, const struct handler_info *hi);
 
 #endif
 
