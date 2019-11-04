@@ -22,6 +22,8 @@
 #include "middfs-client-rsrc.h"
 #include "middfs-serial.h"
 #include "middfs-conn.h"
+#include "middfs-pkt.h"
+#include "middfs-util.h"
 
 // TEST //
 #include <sys/types.h>
@@ -446,19 +448,24 @@ static int middfs_read(const char *path, char *buf, size_t size,
   
   struct middfs_packet pkt =
     {.mpkt_magic = MPKT_MAGIC,
-     .mpkt_type = MPKT_REQUEST,
+     .mpkt_type = MPKT_RESPONSE,
      .mpkt_un = {
+#if REQUEST     
 		 .mpkt_request = 
 		 {.mreq_type = MREQ_READ,
 		  .mreq_requester = strdup("nicholas"),
 		  .mreq_rsrc = client_rsrc->mr_rsrc,
 		  .mreq_size = 4096
 		 }
+#else
+		 .mpkt_response = {.nbytes = 0, .data = NULL}
+				   
+#endif
       }
     };
 
+
 		 
-  char buf_[BUFSIZE];
   struct buffer buf_out = {0};
 
   if (buffer_serialize(&pkt, (serialize_f) serialize_pkt, &buf_out) < 0) {
@@ -471,29 +478,38 @@ static int middfs_read(const char *path, char *buf, size_t size,
     perror("buffer_write");
     goto cleanup;
   }
-  
+
+#if SHUTDOWN
   /* shutdown for sending */
   if (shutdown(clientfd, SHUT_WR) < 0) {
     perror("shutdown");
     goto cleanup;
   }
+#endif
 
   /* read response */
   ssize_t bytes_read;
-  size_t bytes_read_total = 0;
-  char *bufptr = buf_;
-  while ((bytes_read = read(clientfd, bufptr, BUFSIZE)) > 0) {
-    bytes_read_total += bytes_read;
-    bufptr += bytes_read;
-  }
-  if (bytes_read < 0 && errno != ECONNRESET) {
+  struct buffer buf_in;
+  buffer_init(&buf_in);
+
+  while ((bytes_read = buffer_read(clientfd, &buf_in)) > 0) {}
+  if (bytes_read < 0) {
     perror("read");
-    fprintf(stderr, "bytes read: %zd\nbytes total: %zu", bytes_read, bytes_read_total);
     goto cleanup;
   }
 
   /* print out response */
-  printf("%s", buf_);
+  size_t nbytes = buffer_used(&buf_in);
+  int err = 0;
+  deserialize_pkt(buf_in.begin, nbytes, &pkt, &err);
+  if (err) {
+    fprintf(stderr, "deserialize_pkt: invalid packet\n");
+    goto cleanup;
+  }
+
+  assert(pkt.mpkt_type == MPKT_RESPONSE);
+  struct middfs_response *rsp = &pkt.mpkt_un.mpkt_response;
+  fprintf(stderr, "RSP: nbytes = %zu, data = %s\n", rsp->nbytes, rsp->data);
 
   /* close client socket */
   if (close(clientfd) < 0) {
@@ -503,12 +519,17 @@ static int middfs_read(const char *path, char *buf, size_t size,
   
   
   /// END TEST ///
-
+#if READ
   if ((retv = pread(client_rsrc->mr_fd, buf, size, offset)) < 0) {
     retv = -errno;
     goto cleanup;
   }
+#else
+  retv = MIN(sizerem(rsp->nbytes, offset), size);
+  memcpy(buf, (uint8_t *) rsp->data + offset, retv);
+#endif
 
+  
 
  cleanup:
   /* delete temporary resource if needed */
