@@ -486,9 +486,9 @@ static int middfs_read(const char *path, char *buf, size_t size,
     bytes_read_total += bytes_read;
     bufptr += bytes_read;
   }
-  if (bytes_read < 0) {
+  if (bytes_read < 0 && errno != ECONNRESET) {
     perror("read");
-    fprintf(stderr, "bytes read: %zu\n", bytes_read);
+    fprintf(stderr, "bytes read: %zd\nbytes total: %zu", bytes_read, bytes_read_total);
     goto cleanup;
   }
 

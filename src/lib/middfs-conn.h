@@ -12,18 +12,21 @@
 #define LISTEN_PORT_DEFAULT 4321
 #define LISTEN_PORT_DEFAULT_STR TOSTRING(LISTEN_PORT_DEFAULT)
 
+
 int server_start(const char *port, int backlog);
 int server_accept(int servfd);
 int server_loop(struct middfs_socks *socks, const struct handler_info *hi);
 
-int handle_socket_event(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi);
-
-int handle_lstn_event(nfds_t index, struct middfs_socks *socks);
-
-int handle_pkt_event(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi);
-int handle_pkt_outgoing(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi);
-int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi);
-
+enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				   struct middfs_sockinfo *new_sockinfo);
+enum handler_e handle_lstn_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				 struct middfs_sockinfo *new_sockinfo);
+enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				struct middfs_sockinfo *new_sockinfo);
+enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				   struct middfs_sockinfo *new_sockinfo);
+enum handler_e handle_pkt_outgoing(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				   struct middfs_sockinfo *new_sockinfo);
 
 #endif
 

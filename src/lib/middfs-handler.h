@@ -11,9 +11,10 @@
 
 /* Handler function return value enum */
 enum handler_e {
-   HANDLE_ERR = -1, /* An error has occurred during handling of packet. */
-   HANDLE_FIN,      /* Handling of the packet is complete and _out_ packet should be sent back. */
-   HANDLE_FWD,     /* Waiting on pending response*/
+   HS_ERR = -1, /* An internal error occurred. */
+   HS_SUC,      /* Nothing special. */
+   HS_NEW,      /* Create new socket.  */
+   HS_DEL,      /* An error has occurred during handling of packet; socket should be deleted. */
 };
 
 /* Handler function type */

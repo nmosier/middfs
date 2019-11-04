@@ -60,8 +60,10 @@ int main(int argc, char *argv[]) {
   }
 
   /* add server listening socket to socket list to poll */
-  struct middfs_sockinfo serv_sockinfo = {MFD_LSTN};
-  if (middfs_socks_add(servfd, &serv_sockinfo, &socks) < 0) {
+  //  struct middfs_sockinfo serv_sockinfo = {MFD_LSTN};
+  struct middfs_sockinfo serv_sockinfo;
+  middfs_sockinfo_init(MFD_LSTN, servfd, -1, &serv_sockinfo);
+  if (middfs_socks_add(&serv_sockinfo, &socks) < 0) {
     exitno = 4;
     close(servfd);
     goto cleanup;

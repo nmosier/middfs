@@ -18,37 +18,69 @@ enum middfs_socktype
    MFD_NTYPES /* counts number of enum types */
   };
 
+struct middfs_sockend {
+  int fd;
+  struct buffer buf;
+
+  /* Temporary Members */
+  const short *revents; /* used by middfs_sockinfo_pollfd() */
+};
+
 /* struct middfs_sockinfo -- information about socket
  * NOTE: currently contains singleton member, but included
  * for future extendability. */
 struct middfs_sockinfo {
   enum middfs_socktype type;
 
-  struct buffer buf_in;  /* buffer for incoming data */
-  struct buffer buf_out; /* buffer for outgoing data */
+  struct middfs_sockend in;
+  struct middfs_sockend out;
 
-  int resp_fd; /* fd of socket to which to send response */
+  int revents; /* combined revents mask */
 };
 
 struct middfs_socks {
   struct pollfd *pollfds;
   struct middfs_sockinfo *sockinfos;
-  nfds_t count;
-  nfds_t len;
+  int count;
+  int len;
 };
 
-int middfs_sockinfo_init(enum middfs_socktype type,
+int middfs_sockinfo_init(enum middfs_socktype type, int fd_in, int fd_out,
 			 struct middfs_sockinfo *info);
 int middfs_sockinfo_delete(struct middfs_sockinfo *info);
-
+int middfs_sockinfo_checkfds(struct pollfd *pfds, int *nfds_checked,
+			     struct middfs_sockinfo *info);
 
 int middfs_socks_init(struct middfs_socks *socks);
 int middfs_socks_delete(struct middfs_socks *socks);
 int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks);
-int middfs_socks_add(int sockfd, const struct middfs_sockinfo *sockinfo,
+int middfs_socks_add(const struct middfs_sockinfo *sockinfo,
                      struct middfs_socks *socks);
 int middfs_socks_remove(nfds_t index, struct middfs_socks *socks);
 int middfs_socks_pack(struct middfs_socks *socks);
+
+
+
+/*********************
+ * SOCKEND FUNCTIONS *
+ *********************/
+void middfs_sockend_init(int fd, struct middfs_sockend *sockend);
+int middfs_sockend_delete(struct middfs_sockend *sockend);
+
+/* POLLING FUNCTIONS */
+
+int middfs_socks_poll(struct middfs_socks *socks);
+
+int middfs_sockend_pollfd(struct pollfd *pfds, int nfds, int polarity,
+			  struct middfs_sockend *sockend, int *errp);
+size_t middfs_sockinfo_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_sockinfo *info,
+			       int *errp);
+ssize_t middfs_socks_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_socks *socks);
+
+/* Checking after polling */
+int middfs_sockend_check(struct middfs_sockend *sockend);
+int middfs_sockinfo_check(struct middfs_sockinfo *info);
+int middfs_socks_check(struct middfs_socks *socks);
 
 
 #endif

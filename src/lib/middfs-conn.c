@@ -103,13 +103,34 @@ int server_accept(int servfd) {
 int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
   int retv = 0;
 
-  int readyfds = poll(socks->pollfds, socks->count, -1);
-  if (readyfds < 0) {
-    perror("server_loop: poll");
+  int readyfds;
+
+  if ((readyfds = middfs_socks_poll(socks)) < 0) {
+    perror("middfs_socks_poll");
     return -1;
   }
 
+  /* iterate through sockets and handle events */
+  for (int i = 0; i < socks->count; ++i) {
+    struct middfs_sockinfo *info = &socks->sockinfos[i];
+    int revents = info->revents;
+
+    /* remove socket if error occured */
+    if (revents & (POLLERR | POLLHUP)) {
+      if (middfs_socks_remove(i, socks) < 0) {
+	return -1;
+      }
+      continue;
+    }
+
+    /* TODO -- handle socket event */
+  }
+
+
+  
   for (int index = 0; index < socks->count; ++index) {
+
+    
     int revents = socks->pollfds[index].revents;
 
     /* remove socket if error occurred */
@@ -121,13 +142,33 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
       continue;
     }
 
-    int status = handle_socket_event(index, socks, hi);
-    if (status > 0) {
-      /* remove socket */
-      if (middfs_socks_remove(index, socks) < 0) {
+    struct middfs_sockinfo new_sockinfo;
+    enum handler_e status = handle_socket_event(&socks->sockinfos[index], hi, &new_sockinfo);
+
+    switch (status) {
+    case HS_SUC:
+      break;
+      
+    case HS_NEW: /* Add new socket to list */
+      if (middfs_socks_add(&new_sockinfo, socks) < 0) {
+	perror("middfs_socks_add");
+	if (middfs_sockinfo_delete(&new_sockinfo) < 0) {
+	  perror("middfs_sockinfo_delete");
+	}
 	return -1;
       }
-    } else if (status < 0) {
+      break;
+      
+    case HS_DEL: /* Remove socket */
+      if (middfs_socks_remove(index, socks) < 0) {
+	perror("middfs_socks_remove");
+	return -1;
+      }
+      break;
+      
+    case HS_ERR:
+    default:
+      perror("handle_socket_event");
       return -1;
     }
     
@@ -140,78 +181,85 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
    * down. */
 }
 
-int handle_socket_event(nfds_t index, struct middfs_socks *socks,
-                        const struct handler_info *hi) {
-  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
 
+/* RETV:
+ *   (-1) indicates error and socket should be deleted.
+ *   ( 0) indicates success and nothing else should be done.
+ *   ( 1) indicates a new entry in the socket array should be created with _new_sockinfo_ parameter.
+ */
+enum handler_e handle_socket_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				   struct middfs_sockinfo *new_sockinfo) {
   switch (sockinfo->type) {
   case MFD_PKT_IN:
-    return handle_pkt_event(index, socks, hi);
+    return handle_pkt_event(sockinfo, hi, new_sockinfo);
 
   case MFD_PKT_OUT:
     abort(); /* TODO */
         
   case MFD_LSTN: /* POLLIN -- accept new client connection */
-    return handle_lstn_event(index, socks);
+    return handle_lstn_event(sockinfo, hi, new_sockinfo);
     
   case MFD_NONE:
   default:
     abort();
   }
 
-  return 0;
+  return 0;  
 }
 
-int handle_lstn_event(nfds_t index, struct middfs_socks *socks) {
-  int revents = socks->pollfds[index].revents;
-  int fd = socks->pollfds[index].fd;
-  int client_sockfd;
-  
+
+enum handler_e handle_lstn_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				 struct middfs_sockinfo *new_sockinfo) {
+  int revents = sockinfo->revents;
+  int listenfd = sockinfo->in.fd;
+  int clientfd;
+
   if (revents & POLLIN) {
-    if ((client_sockfd = server_accept(fd)) >= 0) {
-      /* valid client connection, so add to socket list */
-      struct middfs_sockinfo sockinfo = {MFD_PKT_IN};
-      if (middfs_socks_add(client_sockfd, &sockinfo, socks) < 0) {
-         perror("middfs_socks_add");
-         close(client_sockfd);
-         return -1;
-      }
+    if ((clientfd = server_accept(listenfd)) < 0) {
+      perror("server_accept");
+      return HS_DEL; /* delete listening socket */
     }
+
+    middfs_sockinfo_init(MFD_PKT_IN, clientfd, -1, new_sockinfo);
+    return HS_NEW; /* create new socket entry */
   }
 
-  return 0;
+  return HS_SUC;
 }
 
-int handle_pkt_event(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
-  struct pollfd *pollfd = &socks->pollfds[index];
-  int revents = pollfd->revents;
+enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				struct middfs_sockinfo *new_sockinfo) {
+  int revents = sockinfo->revents;
 
   if (revents & POLLIN) {
-    return handle_pkt_incoming(index, socks, hi);
+    return handle_pkt_incoming(sockinfo, hi, new_sockinfo);
   }
   if (revents & POLLOUT) {
-    return handle_pkt_outgoing(index, socks, hi);
+    return handle_pkt_outgoing(sockinfo, hi, new_sockinfo);
   }
 
   return 0;
 }
 
-int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
-  struct pollfd *pollfd = &socks->pollfds[index];
-  int fd = pollfd->fd;
-  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
+/* Called when POLLIN set -- function name should indicate this 
+ * TODO */
+enum handler_e handle_pkt_incoming(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+				   struct middfs_sockinfo *new_sockinfo) {
+  struct middfs_sockend *in = &sockinfo->in;
+  int fd = in->fd;
+  struct buffer *buf_in = &in->buf;
+  ssize_t bytes_read;
 
-  struct buffer *buf_in = &sockinfo->buf_in;
-  ssize_t bytes_read = buffer_read(fd, buf_in);
-
+  /* read bytes into buffer */
+  bytes_read = buffer_read(fd, buf_in);
   if (bytes_read < 0) {
     perror("buffer_read");
-    middfs_socks_remove(index, socks);
-    return -1;
+    return HS_DEL; /* delete socket */
   }
   if (bytes_read == 0) {
     /* data ended prematurely -- remove socket from list */
-    return middfs_socks_remove(index, socks);
+    fprintf(stderr, "warning: data ended prematurely for socket %d\n", fd);
+    return HS_DEL;
   }
 
   struct middfs_packet in_pkt;
@@ -221,11 +269,12 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
   
   if (errp) {
     /* invalid data; close socket */
-    return middfs_socks_remove(index, socks);
+    fprintf(stderr, "warning: packet from socket %d contains invalid data\n", fd);
+    return HS_DEL;
   }
 
   if (bytes_required > bytes_ready) {
-    return 0;
+    return HS_SUC; /* wait on more bytes */
   }
 
   /* incoming packet has been successfully deserialized */
@@ -236,55 +285,47 @@ int handle_pkt_incoming(nfds_t index, struct middfs_socks *socks, const struct h
   /* shutdown socket for incoming data */
   if (shutdown(fd, SHUT_RD) < 0) {
     perror("shutdown");
-    middfs_socks_remove(index, socks);
-    return -1;
+    return HS_DEL;
   }
 
-#if USE_HANDLER
-  struct middfs_packet out_pkt;
-  hi->handle_in(&in_pkt, &out_pkt);
-#else
+  /* TODO: This logic shoud be improved. Add transition function. */
+
+  /* Signal that data should now be exclusively written out. */
+  sockinfo->out.fd = sockinfo->in.fd;
+  sockinfo->in.fd = -1; 
+
   //// TESTING /////
   /* TODO: This is where the handler needs to be called. */
-  struct buffer *buf_out = &sockinfo->buf_out;
+  struct buffer *buf_out = &sockinfo->out.buf;
   char *text = "this is the file you were looking for\n";
 
   if (buffer_copy(buf_out, text, strlen(text) + 1) < 0) {
     perror("buffer_copy");
-    middfs_socks_remove(index, socks);
-    return -1;
+    return HS_DEL;
   }
   ///// TESTING ////
-#endif
-    
-  /* configure socket for outgoing data */
-  socks->pollfds[index].events = POLLOUT;      
-  
-  return 0;
+      
+  return HS_SUC;
 }
 
-int handle_pkt_outgoing(nfds_t index, struct middfs_socks *socks, const struct handler_info *hi) {
-  int fd = socks->pollfds[index].fd;
-  struct middfs_sockinfo *sockinfo = &socks->sockinfos[index];
-  struct buffer *buf_out = &sockinfo->buf_out;
-  int retv = 0;
+enum handler_e handle_pkt_outgoing(struct middfs_sockinfo *sockinfo, const struct handler_info *hi,
+			struct middfs_sockinfo *new_sockinfo) {
+  int fd = sockinfo->out.fd;
+  struct buffer *buf_out = &sockinfo->out.buf;
 
   ssize_t bytes_written = buffer_write(fd, buf_out);
-
   if (bytes_written < 0) {
     /* error */
     perror("buffer_write");
-    middfs_socks_remove(index, socks);
-    retv = -1;
+    return HS_DEL;
   }
   if (bytes_written == 0) {
-     /* all of bytes written */
-     if (shutdown(fd, SHUT_WR) < 0) {
-        perror("shutdown");
-        retv = -1;
-     }
-     middfs_socks_remove(index, socks);
+    /* all of bytes written */
+    if (shutdown(fd, SHUT_WR) < 0) {
+      perror("shutdown");
+    }
+    return HS_DEL;
   }
   
-  return retv;
+  return HS_SUC;
 }

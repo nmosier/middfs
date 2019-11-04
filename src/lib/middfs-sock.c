@@ -74,9 +74,7 @@ int middfs_socks_resize(nfds_t newlen, struct middfs_socks *socks) {
 }
 
 
-int middfs_socks_add(int sockfd,
-		     const struct middfs_sockinfo *sockinfo,
-		     struct middfs_socks *socks) {
+int middfs_socks_add(const struct middfs_sockinfo *sockinfo, struct middfs_socks *socks) {
 
   /* resize if necessary */
   if (socks->count == socks->len) {
@@ -86,24 +84,7 @@ int middfs_socks_add(int sockfd,
       return -1;
     }
   }
-
-  struct pollfd *pollfd = &socks->pollfds[socks->count];
-  pollfd->fd = sockfd;
   
-  switch (sockinfo->type) {
-  case MFD_PKT_IN:
-    pollfd->events = POLLIN;
-    break;
-    
-  case MFD_LSTN:
-    pollfd->events = POLLIN;
-    break;
-
-  case MFD_NONE:
-  default:
-    abort();
-  }
-
   socks->sockinfos[socks->count] = *sockinfo;
   ++socks->count;
 
@@ -177,25 +158,224 @@ int middfs_socks_pack(struct middfs_socks *socks) {
 }
 
 
+/* middfs_socks_pollfds() -- construct pollfd array for poll(2).
+ * ARGS:
+ *  - pfds: array of pollfd structs to populate. 
+ *  - nfds: number of fds filled into _pdfs_.
+ *  - socks: socket array to construct _pfds_ from. 
+ * RETV: number of pollfds filled on success; -1 on error.
+ * NOTE: Assumes distinctness of fds in _socks_.
+ */
+ssize_t middfs_socks_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_socks *socks) {
+  size_t nfds_used = 0;
+  int err = 0;
+  
+  for (size_t i = 0; i < socks->count; ++i) {
+    struct middfs_sockinfo *info = &socks->sockinfos[i];
+    nfds_used += middfs_sockinfo_pollfds(pfds + nfds_used, sizerem(nfds, nfds_used), info, &err);
+  }
+
+  return err ? -1 : nfds_used;
+}
+
+/* middfs_socks_poll() -- poll on socket array.
+ * ARGS:
+ *  - socks: socket array to poll on.
+ * RETV: see poll(2).
+ */
+int middfs_socks_poll(struct middfs_socks *socks) {
+  int retv = -1;
+  ssize_t nfds = -1;
+  int nfds_ready = -1;
+  struct pollfd *pfds = NULL;
+
+  /* determine size of pollfs array */
+  if ((nfds = middfs_socks_pollfds(NULL, 0, socks)) < 0) {
+    perror("middfs_socks_pollfds");
+    goto cleanup;
+  }
+
+  /* allocate pollfd array */
+  if ((pfds = calloc(nfds, sizeof(pfds[0]))) == NULL) {
+    perror("calloc");
+    goto cleanup;
+  }
+
+  /* populate pollfd array */
+  middfs_socks_pollfds(pfds, nfds, socks);
+  
+  /* poll on array */
+  if ((poll(pfds, nfds, -1)) < 0) {
+    perror("poll");
+    goto cleanup;
+  }
+
+  /* process all pollfd events */
+  if ((nfds_ready = middfs_socks_check(socks)) < 0) {
+    perror("middfs_socks_check");
+    goto cleanup;
+  }
+
+  /* success */
+  retv = nfds_ready;
+
+ cleanup:
+  if (pfds != NULL) {
+    free(pfds);
+  }
+
+  return retv;
+}
 
 /******************
  * SOCKINFO funcs *
  *****************/
 
-int middfs_sockinfo_init(enum middfs_socktype type,
+int middfs_sockinfo_init(enum middfs_socktype type, int fd_in, int fd_out,
 			 struct middfs_sockinfo *info) {
   info->type = type;
-  buffer_init(&info->buf_in);
-  buffer_init(&info->buf_out);
-  
+  middfs_sockend_init(fd_in, &info->in);
+  middfs_sockend_init(fd_out, &info->out);
   return 0;
 }
 
 int middfs_sockinfo_delete(struct middfs_sockinfo *info) {
   info->type = MFD_NONE;
-  buffer_delete(&info->buf_in);
-  buffer_delete(&info->buf_out);
+  middfs_sockend_delete(&info->in);
+  middfs_sockend_delete(&info->out);
   return 0;
 }
 
+/* middfs_sockinfo_pollfds() -- initialize pollfd struct(s) for given socket. 
+ * ARGS:
+ *  - pfds: pollfds struct array, where 0-2 elements will be initialized
+ *  - nfds: number of entries left in pollfds struct array
+ *  - info: socket info struct.
+ * RETV: number of pollfd structs used (or would have been used, if greater than
+ *       nfds); -1 on error.
+ * TODO: This needs further development.
+ */
+size_t middfs_sockinfo_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_sockinfo *info,
+			       int *errp) {
+  size_t used = 0;
 
+  /* bail on error */
+  if (*errp != 0) {
+    return 0;
+  }
+
+  used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLIN, &info->in, errp);
+  used += middfs_sockend_pollfd(&pfds[used], sizerem(nfds, used), POLLOUT, &info->out, errp);
+
+  return used;
+}
+
+/* middfs_sockinfo_check() -- check given socket for any events after calling poll(2) 
+ * ARGS:
+ *  - pfds: pollfd array/pointer
+ *  - nfds_checked: current index of pfds to look at. Updated by this routine.
+ *  - info: socket info pointer.
+ * RETV: returns POLLIN if socket is ready for reading; POLLOUT if ready for writing.
+ *       -1 on error.
+ * NOTE: This function updates _nfds_checked_. If two events occur on the socket's fds,
+ *       then only one will be processed. The others will be caught with the next poll(2). 
+ */
+int middfs_sockinfo_check(struct middfs_sockinfo *info) {
+  int revents_in = middfs_sockend_check(&info->in);
+  int revents_out = middfs_sockend_check(&info->out);
+  
+  if (revents_in < 0 || revents_out < 0) {
+    return -1;
+  } else {
+    info->revents = revents_in | revents_out;
+    return info->revents;
+  }
+}
+
+/* middfs_socks_check() -- check revents status for socks array 
+ * ARGS:
+ *  - socks: socket list
+ * RETV: returns number of sockets with events; -1 on error.
+ */
+int middfs_socks_check(struct middfs_socks *socks) {
+  int err = 0;
+  int nready = 0;
+
+  for (int i = 0; i < socks->count; ++i) {
+    int revents;
+    if ((revents = middfs_sockinfo_check(&socks->sockinfos[i])) < 0) {
+      middfs_socks_remove(i, socks); /* delete entry */
+      perror("middfs_sockinfo_check");
+      err = 1;
+    } else if (revents > 0) {
+      ++nready;
+    }
+  }
+
+  return err ? -1 : nready;
+}
+
+/*********************
+ * SOCKEND FUNCTIONS *
+ *********************/
+
+void middfs_sockend_init(int fd, struct middfs_sockend *sockend) {
+  sockend->fd = fd;
+  buffer_init(&sockend->buf);
+  sockend->revents = NULL;
+}
+
+int middfs_sockend_delete(struct middfs_sockend *sockend) {
+  buffer_delete(&sockend->buf);
+  if (sockend->fd >= 0 && close(sockend->fd) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+int middfs_sockend_check(struct middfs_sockend *sockend) {
+  int revents = *sockend->revents;
+
+  if (revents & POLLERR) {
+    return -1;
+  } else if (revents & POLLHUP) {
+    int fd = sockend->fd;
+    sockend->fd = -1;
+    if (close(fd) < 0) {
+      perror("close");
+      return -1;
+    }
+    return 0;
+  } else {
+    return revents;
+  }
+}
+
+/* middfs_sockend_pollfd() -- create entry in pollfd array for sockend
+ * ARGS:
+ *  - pfds: pollfds array
+ *  - nfds: number of elements in array 
+ *  - polarity: either POLLIN or POLLOUT
+ *  - sockend: pointer to sockend (in or out)
+ *  - errp: error pointer
+ * RETV: number of pollfd elements populated on success; 0 on error, and *errp set.
+ * NOTE: This routine will add at most 1 pollfd to the array. */
+int middfs_sockend_pollfd(struct pollfd *pfds, int nfds, int polarity,
+			  struct middfs_sockend *sockend, int *errp) {
+  int nfds_used = 0;
+  
+  if (*errp) {
+    return 0;
+  }
+  
+  if (sockend->fd >= 0) {
+    if (nfds > 0) {
+      pfds->fd = sockend->fd;
+      pfds->events = polarity & (POLLIN | POLLOUT);
+      sockend->revents = &pfds->revents;
+      nfds_used = 1;
+    }
+  }
+  
+  return nfds_used;
+}
