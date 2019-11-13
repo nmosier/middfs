@@ -12,11 +12,9 @@ DONE
 [X] Delete MFD_SREQ
 
 TODO
+[ ] get client "request listener" up and running
+[ ] migrate to FUSE 1
 [ ] sockinfos to linked list
-[ ] Way to indicate that incoming request is waiting for resolution of outgoing request.
-[ ] Write struct middfs_response.
-[ ] Write middfs_response (de)serializers.
-[ ] Finish factoring out the handler into its own function.
 
 
 TODO -- CLIENT

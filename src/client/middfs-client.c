@@ -188,6 +188,9 @@ int main(int argc, char *argv[]) {
   }
   
   umask(S_IRGRP|S_IROTH|S_IWGRP|S_IWOTH);
+
+  /* set up client listener */
+  
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
