@@ -24,6 +24,7 @@ bool req_has_off(enum middfs_request_type type) {
   return type == MREQ_READ || type == MREQ_WRITE;
 }
 
+#if 0
 int packet_handle(struct middfs_packet *pkt) {
   const packet_handle_f handlers[MPKT_NTYPES] =
     {[MPKT_NONE] = packet_handle_none,
@@ -65,3 +66,4 @@ int packet_handle_request(struct middfs_packet *pkt) {
 
   return -EOPNOTSUPP;
 }
+#endif

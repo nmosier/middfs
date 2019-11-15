@@ -9,7 +9,7 @@
 
 #include <sys/stat.h>
 
-#include "middfs-rsrc.h"
+#include "lib/middfs-rsrc.h"
 
 struct client_rsrc {
   /* mr_type: type of resource (local or network)

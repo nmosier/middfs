@@ -90,7 +90,7 @@ struct middfs_packet {
   } mpkt_un;
 };
 
-typedef int (*packet_handle_f)(struct middfs_packet *pkt);
+// typedef int (*packet_handle_f)(struct middfs_packet *pkt);
 
 int packet_handle_none(struct middfs_packet *pkt);
 int packet_handle_connect(struct middfs_packet *pkt);

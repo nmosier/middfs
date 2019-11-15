@@ -6,8 +6,8 @@
 #include <string.h>
 
 
-#include "middfs-util.h"
-#include "middfs-client.h"
+#include "lib/middfs-util.h"
+#include "server/middfs-client.h"
 
 static int clients_resize(struct clients *clients, size_t newlen);
 static void clients_sort(struct clients *clients);

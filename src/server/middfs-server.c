@@ -7,12 +7,12 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include "middfs-sock.h"
-#include "middfs-conn.h"
-#include "middfs-rsrc.h"
-#include "middfs-util.h"
+#include "lib/middfs-sock.h"
+#include "lib/middfs-conn.h"
+#include "lib/middfs-rsrc.h"
+#include "lib/middfs-util.h"
 
-static int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out);
+#include "server/middfs-server-handler.h"
 
 int main(int argc, char *argv[]) {
   int exitno = 0;
@@ -66,10 +66,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* call server loop */
-  struct handler_info hi =
-     {.handle_in = server_handle_pkt};
-  
-  while (server_loop(&socks, &hi) >= 0) {}
+  while (server_loop(&socks, &server_hi) >= 0) {}
   
  cleanup:
   if (middfs_socks_delete(&socks) < 0) {
@@ -79,8 +76,3 @@ int main(int argc, char *argv[]) {
   return exitno;
 }
 
-
-static int server_handle_pkt(const struct middfs_packet *in, struct middfs_packet *out) {
-  *out = *in;
-  return 0;
-}

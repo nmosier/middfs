@@ -11,7 +11,7 @@ SERVER := $(realpath $(SERVER_DIR))/$(SERVER_NAME)
 CLIENT := $(realpath $(CLIENT_DIR))/$(CLIENT_NAME)
 BINS := $(SERVER) $(CLIENT)
 
-export CFLAGS := -c -Wall -pedantic -g -I $(realpath $(LIB_DIR))
+export CFLAGS := -c -Wall -pedantic -g -I $(realpath .)
 export LDLIBS := $(LIB)
 
 .PHONY: all

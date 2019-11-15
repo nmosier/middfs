@@ -8,10 +8,11 @@ CFLAGS += `pkg-config fuse3 --cflags`
 LDLIBS += `pkg-config fuse3 --libs`
 
 # Default Mount Parameters
-ROOT_DIR=tst
-CLIENT_DIR=home
-CLIENT_NAME=client
-FUSE_ARGS=-s -f # run in foreground & single-threaded
+ROOT_DIR = tst
+CLIENT_DIR = home
+CLIENT_NAME = client
+FUSE_ARGS = -s -f # run in foreground & single-threaded
+CLIENT_ARGS = $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
 
 # TODO -- C header file dependencies
 
@@ -27,11 +28,15 @@ clean:
 
 .PHONY: mount
 mount:
-	$(realpath $(BIN)) $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
+	$(realpath $(BIN)) $(CLIENT_ARGS)
 
 .PHONY: umount
 umount:
 	umount "$(ROOT_DIR)"
+
+.PHONY: gdb-mount
+gdb-mount:
+	gdb $(realpath $(BIN)) --args $(realpath $(BIN)) $(CLIENT_ARGS)
 
 .PHONY: attach
 attach:

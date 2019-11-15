@@ -12,6 +12,7 @@ DONE
 [X] Delete MFD_SREQ
 
 TODO
+[ ] extricate server-dependent functionality from lib/conn.[ch]
 [ ] get client "request listener" up and running
 [ ] migrate to FUSE 1
 [ ] sockinfos to linked list
