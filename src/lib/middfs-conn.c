@@ -18,6 +18,11 @@
 #include "lib/middfs-serial.h"
 #include "lib/middfs-handler.h"
 
+static enum handler_e handle_pkt_rd(struct middfs_sockinfo *sockinfo,
+                                    const struct handler_info *hi);
+static enum handler_e handle_pkt_wr(struct middfs_sockinfo *sockinfo,
+                                    const struct handler_info *hi);
+
 /* server_start() -- start the server on port _port_ 
    with backlog _backlog_.
    * RETV: the server socket on success, -1 on error.
@@ -207,16 +212,12 @@ enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct h
   if (revents) {
     switch (sockinfo->state) {
     case MSS_REQRD:
-      return hi->reqrd(sockinfo, hi);
+    case MSS_RSPFWD:
+      return handle_pkt_rd(sockinfo, hi);
       
     case MSS_RSPWR:
-      return hi->rspwr(sockinfo, hi);
-      
     case MSS_REQFWD:
-      return hi->reqfwd(sockinfo, hi);
-
-    case MSS_RSPFWD:
-      return hi->rspfwd(sockinfo, hi);
+      return handle_pkt_wr(sockinfo, hi);
 
     case MSS_LSTN:
     case MSS_CLOSED:
@@ -232,3 +233,75 @@ enum handler_e handle_pkt_event(struct middfs_sockinfo *sockinfo, const struct h
 
 
 
+static enum handler_e handle_pkt_rd(struct middfs_sockinfo *sockinfo,
+                                    const struct handler_info *hi) {
+  struct middfs_sockend *in = &sockinfo->in;
+  int fd = in->fd;
+  struct buffer *buf_in = &in->buf;
+  ssize_t bytes_read;
+
+  assert(sockinfo->revents & POLLIN);
+
+  /* read bytes into buffer */
+  bytes_read = buffer_read(fd, buf_in);
+  if (bytes_read < 0) {
+    perror("buffer_read");
+    return HS_DEL; /* delete socket */
+  }
+  if (bytes_read == 0) {
+    /* data ended prematurely -- remove socket from list */
+    fprintf(stderr, "warning: data ended prematurely for socket %d\n", fd);
+    return HS_DEL;
+  }
+
+  struct middfs_packet in_pkt;
+  int errp = 0;
+  size_t bytes_ready = buffer_used(buf_in);
+  size_t bytes_required = deserialize_pkt(buf_in->begin, bytes_ready, &in_pkt, &errp);
+  
+  if (errp) {
+    /* invalid data; close socket */
+    fprintf(stderr, "warning: packet from socket %d contains invalid data\n", fd);
+    return HS_DEL;
+  }
+
+  if (bytes_required > bytes_ready) {
+    return HS_SUC; /* wait on more bytes */
+  }
+
+  /* incoming packet has been successfully deserialized */
+
+  /* remove used bytes */
+  buffer_shift(buf_in, bytes_required);
+
+  /* Call server/client-specific handler function to handle received data and determine
+   * next socket state. */
+  return hi->rd_fin(sockinfo, &in_pkt);
+}
+
+
+/* shared aux fn for rspwr and reqfwd */
+static enum handler_e handle_pkt_wr(struct middfs_sockinfo *sockinfo,
+                                    const struct handler_info *hi) {
+  int fd = sockinfo->out.fd;
+  struct buffer *buf_out = &sockinfo->out.buf;
+
+  assert(sockinfo->revents & POLLOUT);
+  
+  ssize_t bytes_written = buffer_write(fd, buf_out);
+  if (bytes_written < 0) {
+    /* error */
+    perror("buffer_write");
+    return HS_DEL;
+  }
+
+  /* successful write, but more bytes to write, so don't change state */
+  if (bytes_written > 0) {
+     return HS_SUC;
+  }
+  
+  /* all of bytes written;
+   * Call server/client-specific handler function to determine next state.
+   */
+  return hi->wr_fin(sockinfo);
+}
