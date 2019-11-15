@@ -19,7 +19,7 @@ enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
   switch (sockinfo->state) {
   case MSS_RSPFWD: /* just finished reading response */
      sockinfo->state = MSS_RSPWR;
-     if (buffer_serialize(&in_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
+     if (buffer_serialize(in_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
         perror("buffer_serialize");
         return HS_DEL;
      }
