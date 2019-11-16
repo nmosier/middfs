@@ -235,13 +235,11 @@ static int start_client_responder(const char *port, int backlog, pthread_t *thre
 
   memcpy(args, &args_tmp, sizeof(args_tmp));
   
-  if ((errno = pthread_create(thread, NULL, (void *(*)(void *)) client_responder, &args)) > 0) {
+  if ((errno = pthread_create(thread, NULL, (void *(*)(void *)) client_responder, args)) > 0) {
     perror("pthread_create");
+    free(args);
     retv = -1;
   }
-
-  /* cleanup */
-  free(args);
 
   return retv;
 }
