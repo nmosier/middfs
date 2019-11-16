@@ -18,12 +18,20 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
-#include "middfs-client.h"
-#include "middfs-client-ops.h"
-#include "middfs-client-rsrc.h"
+#include "lib/middfs-conn.h"
+
+#include "client/middfs-client.h"
+#include "client/middfs-client-ops.h"
+#include "client/middfs-client-rsrc.h"
+#include "client/middfs-client-responder.h"
 
 #define OPTDEF(t, p) {t, offsetof(struct middfs_opts, p), 1}
+
+#define CLIENT_BACKLOG_DEFAULT 10
+
+static int start_client_responder(const char *port, int backlog, pthread_t *thread);
 
 /* middfs options 
  * NOTE: Must be global because FUSE API doesn't know about this.
@@ -186,11 +194,17 @@ int main(int argc, char *argv[]) {
     }
     mounted_mirror = 1;
   }
+
+  /* start client responder */
+  pthread_t client_responder_thread;
+  if (start_client_responder(LISTEN_PORT_DEFAULT_STR, CLIENT_BACKLOG_DEFAULT, &client_responder_thread) < 0) {
+    perror("start_client_responder");
+    goto cleanup;
+  }
   
   umask(S_IRGRP|S_IROTH|S_IWGRP|S_IWOTH);
 
   /* set up client listener */
-  
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
@@ -202,3 +216,34 @@ int main(int argc, char *argv[]) {
   fuse_opt_free_args(&args);
   return retv;
 }
+
+
+static int start_client_responder(const char *port, int backlog, pthread_t *thread) {
+  int retv = 0;
+  
+  struct client_responder_args args_tmp =
+    {.port = port,
+     .backlog = backlog
+    };
+
+  struct client_responder_args *args;
+
+  if ((args = malloc(sizeof(*args))) == NULL) {
+    perror("malloc");
+    return -1;
+  }
+
+  memcpy(args, &args_tmp, sizeof(args_tmp));
+  
+  if ((errno = pthread_create(thread, NULL, (void *(*)(void *)) client_responder, &args)) > 0) {
+    perror("pthread_create");
+    retv = -1;
+  }
+
+  /* cleanup */
+  free(args);
+
+  return retv;
+}
+
+    

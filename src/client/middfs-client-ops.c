@@ -18,12 +18,15 @@
 #include <sys/stat.h>
 #include <assert.h>
 
-#include "middfs-client-ops.h"
-#include "middfs-client-rsrc.h"
+
 #include "lib/middfs-serial.h"
 #include "lib/middfs-conn.h"
 #include "lib/middfs-pkt.h"
 #include "lib/middfs-util.h"
+
+#include "client/middfs-client-ops.h"
+#include "client/middfs-client-rsrc.h"
+#include "client/middfs-client-handler.h"
 
 // TEST //
 #include <sys/types.h>
@@ -439,7 +442,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
 
   /* connect to server */
   int clientfd;
-  if ((clientfd = inet_connect("140.233.20.6", LISTEN_PORT_DEFAULT)) < 0) {
+  if ((clientfd = inet_connect(SERVER_IP, LISTEN_PORT_DEFAULT)) < 0) {
     perror("inet_connect");
     goto cleanup;
   }

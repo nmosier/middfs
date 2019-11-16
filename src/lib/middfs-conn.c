@@ -27,7 +27,7 @@ static enum handler_e handle_pkt_wr(struct middfs_sockinfo *sockinfo,
    with backlog _backlog_.
    * RETV: the server socket on success, -1 on error.
    */
-int server_start(const char *port, int backlog) {
+int server_start(const char *port, int backlog, struct middfs_socks *socks) {
   int servsock_fd = -1;
   struct addrinfo *res = NULL;
   int gai_stat;
@@ -66,6 +66,17 @@ int server_start(const char *port, int backlog) {
     goto cleanup;
   }
 
+  /* initialize socket list */
+  /* assume _socks_ is already initialized */
+  struct middfs_sockinfo serv_sockinfo;
+  middfs_sockinfo_init(MFD_LSTN, servsock_fd, -1, &serv_sockinfo);
+  if (middfs_socks_add(&serv_sockinfo, socks) < 0) {
+    error = 1;
+    middfs_sockinfo_delete(&serv_sockinfo);
+    middfs_socks_delete(socks);
+    goto cleanup;
+  }
+
  cleanup:
   /* close server socket (if error occurred) */
   if (error && servsock_fd >= 0 && close(servsock_fd) < 0) {
@@ -77,8 +88,8 @@ int server_start(const char *port, int backlog) {
     freeaddrinfo(res);
   }
 
-  /* return -1 on error, server socket on success */
-  return error ? -1 : servsock_fd;
+  /* return -1 on error, 0 on success */
+  return -error;
 }
 
 

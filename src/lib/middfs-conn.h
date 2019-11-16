@@ -14,7 +14,7 @@
 #define LISTEN_PORT_DEFAULT 4321
 #define LISTEN_PORT_DEFAULT_STR TOSTRING(LISTEN_PORT_DEFAULT)
 
-int server_start(const char *port, int backlog);
+int server_start(const char *port, int backlog, struct middfs_socks *socks);
 int server_accept(int servfd);
 int server_loop(struct middfs_socks *socks, const struct handler_info *hi);
 

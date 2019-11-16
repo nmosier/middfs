@@ -46,29 +46,17 @@ int main(int argc, char *argv[]) {
   }
 
   /* start server for listening */
-  int servfd; /* server file descriptor */
-  if ((servfd = server_start(listen_port, 10)) < 0) {
-    return 2;
-  }
-
-  /* initialize socket list to poll on */
   struct middfs_socks socks;
   middfs_socks_init(&socks);
 
-  /* add server listening socket to socket list to poll */
-  //  struct middfs_sockinfo serv_sockinfo = {MFD_LSTN};
-  struct middfs_sockinfo serv_sockinfo;
-  middfs_sockinfo_init(MFD_LSTN, servfd, -1, &serv_sockinfo);
-  if (middfs_socks_add(&serv_sockinfo, &socks) < 0) {
-    exitno = 4;
-    close(servfd);
-    goto cleanup;
+  if (server_start(listen_port, 10, &socks) < 0) {
+    return 2;
   }
 
   /* call server loop */
   while (server_loop(&socks, &server_hi) >= 0) {}
-  
- cleanup:
+
+  /* cleanup */
   if (middfs_socks_delete(&socks) < 0) {
     exitno = 5;
   }

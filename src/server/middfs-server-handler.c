@@ -13,7 +13,7 @@
 
 #define CLIENTB "140.233.167.124" // nmosier's MacBook
 
-enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
+static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
 				    const struct middfs_packet *in_pkt) {
   int tmpfd;
   switch (sockinfo->state) {
@@ -45,7 +45,7 @@ enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
   return HS_SUC;
 }
 
-enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
+static enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
   /* update state & return status */
   int tmpfd;
   switch (sockinfo->state) {
