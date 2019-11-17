@@ -1,6 +1,6 @@
 FUSE ?= 3 # specify FUSE major version
 
-ifeq ($(FUSE),3)
+ifeq ($(strip $(FUSE)),3)
 	FUSE_LIBNAME = fuse3
 else
 	FUSE_LIBNAME = fuse
