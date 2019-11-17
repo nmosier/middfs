@@ -196,11 +196,13 @@ int main(int argc, char *argv[]) {
   }
 
   /* start client responder */
+  #if 0
   pthread_t client_responder_thread;
   if (start_client_responder(LISTEN_PORT_DEFAULT_STR, CLIENT_BACKLOG_DEFAULT, &client_responder_thread) < 0) {
     perror("start_client_responder");
     goto cleanup;
   }
+#endif
   
   umask(S_IRGRP|S_IROTH|S_IWGRP|S_IWOTH);
 
