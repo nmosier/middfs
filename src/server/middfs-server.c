@@ -13,6 +13,10 @@
 #include "lib/middfs-util.h"
 
 #include "server/middfs-server-handler.h"
+#include "server/middfs-client.h"
+#include "server/middfs-server.h"
+
+struct clients clients; /* list of connected clients */
 
 int main(int argc, char *argv[]) {
   int exitno = 0;
@@ -48,6 +52,7 @@ int main(int argc, char *argv[]) {
   /* start server for listening */
   struct middfs_socks socks;
   middfs_socks_init(&socks);
+  clients_init(&clients);
 
   if (server_start(listen_port, 10, &socks) < 0) {
     return 2;

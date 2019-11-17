@@ -17,7 +17,7 @@ struct clients {
   size_t cnt; /* number of used elements in vector */
 };
 
-int client_create(const char *username, const char *IP, struct client *client);
+int client_create(const char *username, int sockfd, struct client *client);
 void client_delete(struct client *client);
 int client_cmp(const struct client *c1, const struct client *c2);
 

@@ -3,7 +3,12 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 
 #include "lib/middfs-util.h"
@@ -14,15 +19,47 @@ static void clients_sort(struct clients *clients);
 
 /* CLIENT functions */
 
-int client_create(const char *username, const char *IP, struct client *client) {
-  if ((client->username = strdup(username)) == NULL) {
-    return -1;
+int client_create(const char *username, int sockfd, struct client *client) {
+   int retv = -1;
+   
+   /* initialize client fields */
+   client->IP = NULL;
+   client->username = NULL;
+   
+   /* duplicate and store string */
+   if ((client->username = strdup(username)) == NULL) {
+      return -1;
+   }
+
+  /* obtain address info for _sockfd_ */
+  struct sockaddr_in addr;
+  socklen_t addr_len;
+
+  if (getsockname(sockfd, (struct sockaddr *) &addr, &addr_len) < 0) {
+     perror("getsockname");
+     goto cleanup;
   }
-  if ((client->IP = strdup(username)) == NULL) {
-    free(client->username);
-    return -1;
+
+  /* get formatted IP string for _sockfd_ */
+  char *IP;
+  if ((IP = inet_ntoa(addr.sin_addr)) == NULL) {
+     perror("inet_ntoa");
+     goto cleanup;
   }
-  return 0;
+  if ((client->IP = strdup(IP)) == NULL) {
+     perror("strdup");
+     goto cleanup;
+  }
+
+  /* success */
+  retv = 0;
+
+ cleanup:
+  if (retv < 0) {
+     client_delete(client);
+  }
+  
+  return retv;
 }
 
 void client_delete(struct client *client) {

@@ -8,8 +8,9 @@
 #include "lib/middfs-handler.h"
 #include "lib/middfs-conn.h"
 
+#include "server/middfs-client.h"
 #include "server/middfs-server-handler.h"
-
+#include "server/middfs-server.h"
 
 #define CLIENTB "140.233.167.124" // nmosier's MacBook
 
@@ -23,11 +24,16 @@ static enum handler_e handle_rsp_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt);
 static enum handler_e handle_rsp_wr_fin(struct middfs_sockinfo *sockinfo);
 
+static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
+                                     const struct middfs_packet *in_pkt);
+
 static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
 				    const struct middfs_packet *in_pkt) {
 
    switch (in_pkt->mpkt_type) {
    case MPKT_CONNECT:
+      return handle_connect(sockinfo, in_pkt);
+      
    case MPKT_DISCONNECT:
       /* TODO */
       abort();
@@ -117,9 +123,40 @@ static enum handler_e handle_rsp_wr_fin(struct middfs_sockinfo *sockinfo) {
    return HS_DEL;   
 }
 
+
+
+
+static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
+                                     const struct middfs_packet *in_pkt) {
+   
+   /* create client */
+   struct client client;
+   if (client_create(in_pkt->mpkt_un.mpkt_connect.name, sockinfo->in.fd, &client) < 0) {
+      perror("client_create");
+      return HS_DEL;
+   }
+
+   /* insert into clients list */
+   if (clients_add(&client, &clients) < 0) {
+      perror("clients_add");
+      return HS_DEL;
+   }
+
+   /* DEBUG: print out info */
+   fprintf(stderr, "new client connected: name = \"%s\", IP = \"%s\"\n", client.username,
+           client.IP);
+
+   return HS_DEL;
+}
+
+
+
 /* Handler Interface Definition */
 
 struct handler_info server_hi =
   {.rd_fin = handle_pkt_rd_fin,
    .wr_fin = handle_pkt_wr_fin
   };
+
+
+

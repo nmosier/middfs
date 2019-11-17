@@ -19,19 +19,28 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
+#include "lib/middfs-serial.h"
 #include "lib/middfs-conn.h"
+#include "lib/middfs-pkt.h"
+#include "lib/middfs-util.h"
 
 #include "client/middfs-client.h"
 #include "client/middfs-client-ops.h"
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client-responder.h"
+#include "client/middfs-client-handler.h"
 
 #define OPTDEF(t, p) {t, offsetof(struct middfs_opts, p), 1}
 
 #define CLIENT_BACKLOG_DEFAULT 10
 
 static int start_client_responder(const char *port, int backlog, pthread_t *thread);
+static int client_connect(const char *server_IP, int port, char *username);
 
 /* middfs options 
  * NOTE: Must be global because FUSE API doesn't know about this.
@@ -195,6 +204,12 @@ int main(int argc, char *argv[]) {
     mounted_mirror = 1;
   }
 
+  /* connect to server */
+  if (client_connect(SERVER_IP, LISTEN_PORT_DEFAULT, "clientA") < 0) {
+     perror("client_connect");
+     goto cleanup;
+  }
+
   /* start client responder */
   pthread_t client_responder_thread;
   if (start_client_responder(LISTEN_PORT_DEFAULT_STR, CLIENT_BACKLOG_DEFAULT,
@@ -245,4 +260,45 @@ static int start_client_responder(const char *port, int backlog, pthread_t *thre
   return retv;
 }
 
-    
+/* client_connect() -- send MPKT_CONNECT packet to server.
+ * RETV: -1 on error; 0 on success.
+ */
+static int client_connect(const char *server_IP, int port, char *username) {
+   int retv = -1;
+   
+   /* obtain socket for communication with server */
+   int sockfd = -1;
+   if ((sockfd = inet_connect(server_IP, port)) < 0) {
+      perror("inet_connect");
+      goto cleanup;
+   }
+
+   /* construct connection packet */
+   struct middfs_packet conn_pkt =
+      {.mpkt_magic = MPKT_MAGIC,
+       .mpkt_type = MPKT_CONNECT,
+       .mpkt_un = {.mpkt_connect = {.name = username}}
+      };
+
+   struct buffer buf_out;
+   buffer_init(&buf_out);
+
+   if (buffer_serialize(&conn_pkt, (serialize_f) serialize_pkt, &buf_out) < 0) {
+      perror("buffer_serialize");
+      goto cleanup;
+   }
+
+   while (!buffer_isempty(&buf_out) && buffer_write(sockfd, &buf_out) >= 0) {}
+  
+   /* success */
+   retv = 0;
+
+ cleanup:
+   if (sockfd >= 0) {
+      if (close(sockfd) < 0) {
+         perror("close");
+      }
+   }
+
+   return retv;
+}
