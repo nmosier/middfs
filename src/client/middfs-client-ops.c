@@ -513,7 +513,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
   
   struct middfs_packet pkt =
     {.mpkt_magic = MPKT_MAGIC,
-     .mpkt_type = MPKT_RESPONSE,
+     .mpkt_type = MPKT_REQUEST,
      .mpkt_un = {
           .mpkt_request = 
           {.mreq_type = MREQ_READ,
