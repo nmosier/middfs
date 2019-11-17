@@ -457,6 +457,10 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
      break;
     
   case MPKT_CONNECT:
+    used += deserialize_connect(buf_ + used, sizerem(nbytes, used),
+				&pkt->mpkt_un.mpkt_connect, errp);
+    break;
+    
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
   default:
