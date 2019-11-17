@@ -11,8 +11,12 @@
 #define STRINGIFY(s) #s
 #define TOSTRING(s) STRINGIFY(s)
 
-#define MAX(i1, i2) ((i1) < (i2) ? (i2) : (i1))
-#define MIN(i1, i2) ((i1) < (i2) ? (i1) : (i2))
+#ifndef MAX
+  #define MAX(i1, i2) ((i1) < (i2) ? (i2) : (i1))
+#endif
+#ifndef MIN
+  #define MIN(i1, i2) ((i1) < (i2) ? (i1) : (i2))
+#endif
 
 size_t sizerem(size_t nbytes, size_t used);
 size_t smin(size_t s1, size_t s2);

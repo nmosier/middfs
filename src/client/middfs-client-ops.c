@@ -574,7 +574,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
 
   assert(pkt.mpkt_type == MPKT_RESPONSE);
   struct middfs_response *rsp = &pkt.mpkt_un.mpkt_response;
-  fprintf(stderr, "RSP: nbytes = %zu, data = %s\n", rsp->nbytes, rsp->data);
+  fprintf(stderr, "RSP: nbytes = %llu, data = %s\n", rsp->nbytes, rsp->data);
 
   /* close client socket */
   if (close(clientfd) < 0) {

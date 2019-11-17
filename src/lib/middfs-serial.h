@@ -58,10 +58,10 @@ size_t serialize_rsrc(const struct rsrc *rsrc, void *buf,
 size_t deserialize_rsrc(const void *buf, size_t nbytes,
 			struct rsrc *rsrc, int *errp);
 
-size_t serialize_uint32(const uint32_t *uint, void *buf,
+size_t serialize_uint32(const uint32_t uint, void *buf,
 			size_t nbytes);
 
-size_t serialize_uint64(const uint64_t *uint, void *buf,
+size_t serialize_uint64(const uint64_t uint, void *buf,
 			size_t nbytes);
 
 
@@ -74,10 +74,10 @@ size_t deserialize_int64(const void *buf, size_t nbytes,
 size_t deserialize_uint64(const void *buf, size_t nbytes,
 			  uint64_t *uint, int *errp);
 
-size_t serialize_int64(const int64_t *int64, void *buf,
+size_t serialize_int64(const int64_t int64, void *buf,
 		       size_t nbytes);
 
-size_t serialize_int32(const int32_t *int32, void *buf,
+size_t serialize_int32(const int32_t int32, void *buf,
 		       size_t nbytes);
 
 size_t deserialize_int32(const void *buf, size_t nbytes,

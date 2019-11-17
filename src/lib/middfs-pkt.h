@@ -52,9 +52,9 @@ struct middfs_request {
 
   /* request-specific members */
   int mreq_mode;    /* access, chmod, create, open */
-  size_t mreq_size; /* readlink, truncate, read, write */
+  uint64_t mreq_size; /* readlink, truncate, read, write */
   char *mreq_to;    /* symlink, rename */
-  size_t mreq_off;  /* read, write */
+  uint64_t mreq_off;  /* read, write */
   
   /* (none): getattr, unlink, getattr, rmdir, readdir */
 };
@@ -65,7 +65,7 @@ bool req_has_off(enum middfs_request_type type);
 
 /* TODO: response will definintely need to be changes in the future. */
 struct middfs_response {
-   size_t nbytes;
+   uint64_t nbytes;
    void *data;
 };
 

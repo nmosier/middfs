@@ -231,20 +231,20 @@ size_t deserialize_str(const void *buf, size_t nbytes,
   return len + 1;
 }
 
-size_t serialize_uint32(const uint32_t *uint, void *buf,
+size_t serialize_uint32(const uint32_t uint, void *buf,
 			size_t nbytes) {
   /* TODO: write serialize_uint deserialize_uint */
   
-  if (sizeof(uint32_t) <= nbytes) {
-    *((uint32_t *) buf) = htonl(*uint);  
+  if (sizeof(uint) <= nbytes) {
+    *((uint32_t *) buf) = htonl(uint);  
   }
   
-  return sizeof(uint32_t);
+  return sizeof(uint);
 }
 
-size_t serialize_int32(const int32_t *int32, void *buf,
+size_t serialize_int32(const int32_t int32, void *buf,
 		       size_t nbytes) {
-  return serialize_uint32((const uint32_t *) int32, buf,
+  return serialize_uint32((const uint32_t) int32, buf,
 			  nbytes);
 }
 
@@ -321,7 +321,7 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   enum middfs_request_type type = req->mreq_type;
 
   /* serialize shared members */
-  used += serialize_uint32(&type, buf_ + used,
+  used += serialize_uint32((uint32_t) type, buf_ + used,
 			   sizerem(nbytes, used));
   used += serialize_str(req->mreq_requester, buf_ + used,
 			sizerem(nbytes, used));
@@ -333,12 +333,12 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   
   /* serialize _mode_ */
   if (req_has_mode(type)) {
-    used += serialize_int32(&req->mreq_mode, buf_ + used, sizerem(nbytes, used));
+     used += serialize_int32((int32_t) req->mreq_mode, buf_ + used, sizerem(nbytes, used));
   }
 
   /* serialize _size_ */
   if (req_has_size(type)) {
-    used += serialize_uint64(&req->mreq_size, buf_ + used, sizerem(nbytes, used));
+     used += serialize_uint64((int32_t) req->mreq_size, buf_ + used, sizerem(nbytes, used));
   }
 
   /* serialize _to_ */
@@ -348,7 +348,7 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
 
   /* serilaize _off_ */
   if (req_has_off(type)) {
-    used += serialize_uint64(&req->mreq_off, buf_ + used, sizerem(nbytes, used));
+     used += serialize_uint64((int32_t) req->mreq_off, buf_ + used, sizerem(nbytes, used));
   }
   
   return used;
@@ -383,7 +383,7 @@ size_t deserialize_request(const void *buf, size_t nbytes,
     used += deserialize_int32(buf_ + used, sizerem(nbytes, used), &req->mreq_mode, errp);
   }
   if (req_has_size(type)) {
-    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_size, errp);
+     used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_size, errp);
   }
   if (req_has_to(type)) {
     used += deserialize_str(buf_ + used, sizerem(nbytes, used), &req->mreq_to, errp);
@@ -400,15 +400,15 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
   uint8_t *buf_ = (uint8_t *) buf;
   size_t used = 0;
   
-  used += serialize_uint32(&pkt->mpkt_magic, buf_ + used,
+  used += serialize_uint32((uint32_t) pkt->mpkt_magic, buf_ + used,
 			   sizerem(nbytes, used));
-  used += serialize_uint32(&pkt->mpkt_type, buf_ + used,
+  used += serialize_uint32((uint32_t) pkt->mpkt_type, buf_ + used,
 			   sizerem(nbytes, used));
   
   switch (pkt->mpkt_type) {
   case MPKT_REQUEST:
-    used += serialize_request(&pkt->mpkt_un.mpkt_request,
-			      buf_ + used, sizerem(nbytes, used));
+     used += serialize_request(&pkt->mpkt_un.mpkt_request,
+                               buf_ + used, sizerem(nbytes, used));
     break;
 
   case MPKT_RESPONSE:
@@ -466,27 +466,27 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
 
 
 
-size_t serialize_uint64(const uint64_t *uint, void *buf,
+size_t serialize_uint64(const uint64_t uint, void *buf,
 			size_t nbytes) {
   /* serialize top 4 bytes, then serialize bottom 4 bytes */
   uint8_t *buf_ = (uint8_t *) buf;
   
   size_t used = 0;
   uint32_t uint1, uint2;
-  uint1 = *uint >> 32;
-  uint2 = *uint & 0xffffffff;
+  uint1 = uint >> 32;
+  uint2 = uint & 0xffffffff;
   
-  used += serialize_uint32(&uint1, buf_ + used,
+  used += serialize_uint32(uint1, buf_ + used,
 			   sizerem(nbytes, used));
-  used += serialize_uint32(&uint2, buf_ + used,
+  used += serialize_uint32(uint2, buf_ + used,
 			   sizerem(nbytes, used));
   
   return used;
 }
 
-size_t serialize_int64(const int64_t *int64, void *buf,
+size_t serialize_int64(const int64_t int64, void *buf,
 		       size_t nbytes) {
-  return serialize_uint64((const uint64_t *) int64, buf, nbytes);
+   return serialize_uint64((const uint64_t) int64, buf, nbytes);
 }
 
 size_t deserialize_uint64(const void *buf, size_t nbytes,
@@ -518,7 +518,7 @@ size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes
    uint8_t *buf_ = (uint8_t *) buf;
    size_t used = 0;
 
-   used += serialize_uint64(&rsp->nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
+   used += serialize_uint64(rsp->nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
    if (rsp->nbytes <= sizerem(nbytes, used)) {
       memcpy(buf_ + used, rsp->data, rsp->nbytes);
    }
