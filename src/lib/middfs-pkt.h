@@ -63,15 +63,14 @@ bool req_has_size(enum middfs_request_type type);
 bool req_has_to(enum middfs_request_type type);
 bool req_has_off(enum middfs_request_type type);
 
-/* TODO: response will definintely need to be changes in the future. */
+/* TODO: response will definintely need to be changed in the future. */
 struct middfs_response {
    uint64_t nbytes;
    void *data;
 };
 
 struct middfs_connect {
-  /* TODO: stub */
-  int dummy;
+   char *name; /* username of client */
 };
 
 struct middfs_disconnect {
