@@ -105,4 +105,9 @@ size_t deserialize_enum(const void *buf, size_t nbytes,
 size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes);
 size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *rsp, int *errp);
 
+
+size_t deserialize_connect(const void *buf, size_t nbytes, struct middfs_connect *conn, int *errp);
+size_t serialize_connect(const struct middfs_connect *conn, void *buf, size_t nbytes);
+
+
 #endif

@@ -416,6 +416,9 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
      break;
     
   case MPKT_CONNECT:
+     used += serialize_connect(&pkt->mpkt_un.mpkt_connect, buf_ + used, sizerem(nbytes, used));
+     break;
+     
   case MPKT_DISCONNECT:
   case MPKT_NONE:  
   default:
@@ -544,6 +547,25 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
       memcpy(rsp->data, buf_ + used, rsp->nbytes);         
    }
    used += rsp->nbytes;
+
+   return used;
+}
+
+
+size_t serialize_connect(const struct middfs_connect *conn, void *buf, size_t nbytes) {
+   uint8_t *buf_ = (uint8_t *) buf;
+   size_t used = 0;
+
+   used += serialize_str(conn->name, buf_ + used, sizerem(nbytes, used));
+   
+   return used;
+}
+
+size_t deserialize_connect(const void *buf, size_t nbytes, struct middfs_connect *conn, int *errp) {
+   const uint8_t *buf_ = (const uint8_t *) buf;
+   size_t used = 0;
+
+   used += deserialize_str(buf_ + used, sizerem(nbytes, used), &conn->name, errp);
 
    return used;
 }
