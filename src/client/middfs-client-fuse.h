@@ -4,7 +4,7 @@
 #define __MIDDFS_CLIENT_FUSE_H
 
 #ifndef FUSE
-  #error "FUSE version is not defined.
+  #error "FUSE version is not defined."
 #endif
 
 
