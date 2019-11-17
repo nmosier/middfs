@@ -6,10 +6,6 @@
 #ifndef __MIDDFS_CLIENT_H
 #define __MIDDFS_CLIENT_H
 
-#define FUSE_USE_VERSION 31
-
-#include <fuse.h>
-
 struct middfs_conf {
   char *local_dir;
   char *client_name;

@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "middfs-client-rsrc.h"
 #include "middfs-client.h"

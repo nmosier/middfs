@@ -1,11 +1,20 @@
+FUSE ?= 3 # specify FUSE major version
+
+ifeq ($(FUSE),3)
+	FUSE_LIBNAME = fuse3
+else
+	FUSE_LIBNAME = fuse
+endif
+
 SRCS = $(wildcard *.c)
 HDRS = $(wildcard *.h)
 OBJS = $(SRCS:.c=.o)
 
 BIN ?= middfs-client
 
-CFLAGS += `pkg-config fuse3 --cflags`
-LDLIBS += `pkg-config fuse3 --libs`
+CFLAGS += `pkg-config $(FUSE_LIBNAME) --cflags`
+LDLIBS += `pkg-config $(FUSE_LIBNAME) --libs`
+CPPFLAGS += -DFUSE=$(FUSE)
 
 # Default Mount Parameters
 ROOT_DIR = tst
@@ -20,7 +29,7 @@ $(BIN): $(OBJS)
 	$(CC) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 .PHONY: clean
 clean:

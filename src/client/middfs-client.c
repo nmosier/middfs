@@ -3,7 +3,7 @@
  * Sep 2019
  */
 
-#define FUSE_USE_VERSION 31
+#include "client/middfs-client-fuse.h"
 
 #define _GNU_SOURCE /* TODO: Shouldn't need this. Not portable. */
 

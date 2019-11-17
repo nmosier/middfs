@@ -3,7 +3,7 @@
  * Tommaso Monaco & Nicholas Mosier, Oct 2019 
  */
 
-#define FUSE_USE_VERSION 31
+#include "client/middfs-client-fuse.h"
 
 #include <fuse.h>
 #include <stdlib.h>
@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <assert.h>
 
-
 #include "lib/middfs-serial.h"
 #include "lib/middfs-conn.h"
 #include "lib/middfs-pkt.h"
@@ -28,19 +27,13 @@
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client-handler.h"
 
-// TEST //
-#include <sys/types.h>
-#include <sys/socket.h>
-// END TEST //
-
-/* file I/O function definitions */
-
 /* NOTE: return value is for private context and is passed
  * to all other middfs functions. Don't need to use for now,
  * though. */
+#if FUSE == 3
+
 static void *middfs_init(struct fuse_conn_info *conn,
 			 struct fuse_config *cfg) {
-  // cfg->kernel_cache = 1; /* no kernel caching? */
   cfg->use_ino = 1; /* use inodes */
   
   /* disable caching */
@@ -48,25 +41,47 @@ static void *middfs_init(struct fuse_conn_info *conn,
   cfg->attr_timeout = 0.0;
   cfg->negative_timeout = 0.0;
   
+  return NULL;  
+}
+#else /* FUSE == 2 */
+
+static void *middfs_init(struct fuse_conn_info *conn) {
   return NULL;
 }
 
+#endif
 
-static int middfs_getattr(const char *path, struct stat *stbuf,
-			  struct fuse_file_info *fi) {
+
+
+static int middfs_getattr
+(
+#if FUSE == 3
+ const char *path, struct stat *stbuf, struct fuse_file_info *fi
+#else
+ const char *path, struct stat *stbuf
+#endif
+)
+{
   int retv = 0;
   struct client_rsrc *client_rsrc = NULL;
   struct client_rsrc client_rsrc_tmp;
-    
+
+#if FUSE == 2
+  void *fi = NULL; /* fi parameter is missing in FUSE 2 API */
+#endif
+  
   if (fi == NULL) {
     /* create & open temporary resource */
     if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
       return retv;
     }
     client_rsrc = &client_rsrc_tmp;
-  } else {
+  }
+#if FUSE == 3
+  else {
     client_rsrc = (struct client_rsrc *) fi->fh;
   }
+#endif
 
   /* get lstat info */
   if ((retv = client_rsrc_lstat(client_rsrc, stbuf)) < 0) {
@@ -124,10 +139,20 @@ static int middfs_readlink(const char *path, char *buf,
   return retv;
 }
 
-static int middfs_readdir(const char *path, void *buf,
-			  fuse_fill_dir_t filler, off_t offset,
-			  struct fuse_file_info *fi,
-			  enum fuse_readdir_flags flags) {
+static int middfs_readdir
+(
+#if FUSE == 3
+ const char *path, void *buf,
+ fuse_fill_dir_t filler, off_t offset,
+ struct fuse_file_info *fi,
+ enum fuse_readdir_flags flags
+#else
+ const char *path, void *buf,
+ fuse_fill_dir_t filler, off_t offset,
+ struct fuse_file_info *fi
+#endif
+)
+{
   DIR *dir = NULL;
   struct dirent *dir_entry;
   int retv = 0;
@@ -153,8 +178,15 @@ static int middfs_readdir(const char *path, void *buf,
     memset(&st, 0, sizeof(st));
     st.st_ino = dir_entry->d_ino;
     st.st_mode = dir_entry->d_type << 12; /* no clue... */
-    if (filler(buf, dir_entry->d_name, &st, 0, 0)) {
-      break; /* buffer full? */
+    
+    if (filler(
+#if FUSE == 3	       
+	       buf, dir_entry->d_name, &st, 0, 0
+#else
+	       buf, dir_entry->d_name, &st, 0
+#endif
+	       )) {
+      break; /* buffer full */
     }
   }
   
@@ -249,15 +281,17 @@ static int middfs_symlink(const char *to, const char *from) {
   return retv;
 }
 
-static int middfs_rename(const char *from, const char *to,
-			 unsigned int flags) {
+static int middfs_rename
+(
+#if FUSE == 3
+ const char *from, const char *to, unsigned int flags
+#else
+ const char *from, const char *to
+#endif
+ )
+{
   int retv = 0;
   struct client_rsrc client_rsrc_from, client_rsrc_to;
-
-  /* no flags are currently supported */
-  if (flags) {
-    return -EINVAL;
-  }
 
   /* create resources */
   if ((retv = client_rsrc_create(from, &client_rsrc_from)) < 0) {
@@ -296,20 +330,34 @@ static int middfs_link(const char *from, const char *to) {
 }
 #endif
 
-static int middfs_chmod(const char *path, mode_t mode,
-			struct fuse_file_info *fi) {
+static int middfs_chmod
+(
+#if FUSE == 3
+ const char *path, mode_t mode, struct fuse_file_info *fi
+#else
+ const char *path, mode_t mode
+#endif
+ )
+{
   int retv = 0;
   struct client_rsrc *client_rsrc = NULL;
   struct client_rsrc client_rsrc_tmp;
-  
-  if (fi != NULL) {
-    client_rsrc = (struct client_rsrc *) fi->fh;
-  } else {
+
+#if FUSE == 2
+  void *fi = NULL; /* fi parameter missing in FUSE 2 API */
+#endif
+
+  if (fi == NULL) {
     if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
       return retv;
     }
     client_rsrc = &client_rsrc_tmp;
   }
+#if FUSE == 3
+  else {
+    client_rsrc = (struct client_rsrc *) fi->fh;
+  }
+#endif
 
   retv = client_rsrc_chmod(client_rsrc, mode);
 
@@ -338,20 +386,34 @@ static int middfs_chown(const char *path, uid_t uid, gid_t gid,
 }
 #endif
 
-static int middfs_truncate(const char *path, off_t size,
-			   struct fuse_file_info *fi) {
+static int middfs_truncate
+(
+#if FUSE == 3
+ const char *path, off_t size, struct fuse_file_info *fi
+#else
+ const char *path, off_t size
+#endif
+ )
+{
   int retv = 0;
   struct client_rsrc *client_rsrc = NULL;
   struct client_rsrc client_rsrc_tmp;
 
+#if FUSE == 2
+  void *fi = NULL; /* fi parameter missing in FUSE 2 API */
+#endif
+  
   if (fi == NULL) {
     if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
       return retv;
     }
     client_rsrc = &client_rsrc_tmp;
-  } else {
+  }
+#if FUSE == 3
+  else {
     client_rsrc = (struct client_rsrc *) fi->fh;
   }
+#endif
 
   retv = client_rsrc_truncate(client_rsrc, size);
 

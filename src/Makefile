@@ -1,3 +1,5 @@
+# FUSE_USE_VERSION ?= 31 # specify default FUSE API
+
 LIB_DIR = lib
 SERVER_DIR = server
 CLIENT_DIR = client
