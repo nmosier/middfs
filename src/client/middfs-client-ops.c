@@ -515,18 +515,13 @@ static int middfs_read(const char *path, char *buf, size_t size,
     {.mpkt_magic = MPKT_MAGIC,
      .mpkt_type = MPKT_RESPONSE,
      .mpkt_un = {
-#if REQUEST     
-		 .mpkt_request = 
-		 {.mreq_type = MREQ_READ,
-		  .mreq_requester = strdup("nicholas"),
-		  .mreq_rsrc = client_rsrc->mr_rsrc,
-		  .mreq_size = 4096
-		 }
-#else
-		 .mpkt_response = {.nbytes = 0, .data = NULL}
-				   
-#endif
-      }
+          .mpkt_request = 
+          {.mreq_type = MREQ_READ,
+           .mreq_requester = strdup("nicholas"),
+           .mreq_rsrc = client_rsrc->mr_rsrc,
+           .mreq_size = 4096
+          }
+       }
     };
 
 
