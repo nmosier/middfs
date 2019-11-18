@@ -8,6 +8,14 @@ LIB_NAME = middfs-lib.a
 SERVER_NAME = middfs-server
 CLIENT_NAME = middfs-client
 
+# LIB_SRCS = $(wildcard $(LIB_DIR)/*.c)
+# SERVER_SRCS = $(wildcard $(SERVER_DIR)/*.c)
+# CLIENT_SRCS = $(wildcard $(CLIENT_DIR)/*.c)
+# 
+# LIB_OBJS = $(LIB_SRCS:.c=.o)
+# SERVER_OBJS = $(SERVER_SRCS:.c=.o)
+# CLIENT_OBJS = $(CLIENT_SRSC:.c=.o)
+
 LIB := $(realpath $(LIB_DIR))/$(LIB_NAME)
 SERVER := $(realpath $(SERVER_DIR))/$(SERVER_NAME)
 CLIENT := $(realpath $(CLIENT_DIR))/$(CLIENT_NAME)
