@@ -25,6 +25,9 @@ CLIENT_ARGS = $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(
 
 # TODO -- C header file dependencies
 
+all:
+	cd .. && $(MAKE) client
+
 $(BIN): $(OBJS)
 	$(CC) -o $@ $^ $(LDLIBS)
 

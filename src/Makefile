@@ -31,10 +31,10 @@ client: $(CLIENT)
 $(LIB): FORCE
 	cd $(LIB_DIR) && $(MAKE) LIB=$(LIB) $@
 
-$(SERVER): $(LIB)
+$(SERVER): $(LIB) FORCE
 	cd $(SERVER_DIR) && $(MAKE) BIN=$(SERVER) $@
 
-$(CLIENT): $(LIB)
+$(CLIENT): $(LIB) FORCE
 	cd $(CLIENT_DIR) && $(MAKE) BIN=$(CLIENT) $@
 
 

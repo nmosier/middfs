@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
       show_help(argv[0]);
       goto cleanup;
     }
+    fuse_main(args.argc, args.argv, &middfs_oper, NULL);
     return 0;
   }
 
