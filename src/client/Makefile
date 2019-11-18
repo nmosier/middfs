@@ -25,6 +25,7 @@ CLIENT_ARGS = $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(
 
 # TODO -- C header file dependencies
 
+.PHONY: all
 all:
 	cd .. && $(MAKE) client
 

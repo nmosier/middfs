@@ -135,8 +135,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (middfs_opts.show_help) {
-    if (fuse_opt_add_arg(&args, "--help") == 0) {
-      show_help(argv[0]);
+    show_help(argv[0]);    
+    if (fuse_opt_add_arg(&args, "--help") < 0) {
       goto cleanup;
     }
     fuse_main(args.argc, args.argv, &middfs_oper, NULL);
