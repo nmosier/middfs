@@ -7,6 +7,11 @@ BIN  = middfs-server
 
 # Default Running Parameters
 
+# Default Target
+.PHONY: all
+all:
+	cd .. && $(MAKE) server
+
 $(BIN): $(OBJS)
 	$(CC) -o $@ $^ $(LDLIBS)
 

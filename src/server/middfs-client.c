@@ -28,14 +28,14 @@ int client_create(const char *username, int sockfd, struct client *client) {
    
    /* duplicate and store string */
    if ((client->username = strdup(username)) == NULL) {
-      return -1;
+      goto cleanup;
    }
 
   /* obtain address info for _sockfd_ */
   struct sockaddr_in addr;
-  socklen_t addr_len;
+  socklen_t addr_len = sizeof(addr);
 
-  if (getsockname(sockfd, (struct sockaddr *) &addr, &addr_len) < 0) {
+  if (getpeername(sockfd, (struct sockaddr *) &addr, &addr_len) < 0) {
      perror("getsockname");
      goto cleanup;
   }
