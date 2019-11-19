@@ -6,7 +6,8 @@ HDRS = $(wildcard *.h)
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all
-all: $(LIB)
+all:
+	cd .. && $(MAKE) lib
 
 %.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -o $@ $<
