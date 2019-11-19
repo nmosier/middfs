@@ -17,11 +17,11 @@ LDLIBS += `pkg-config $(FUSE_LIBNAME) --libs`
 CPPFLAGS += -DFUSE=$(FUSE)
 
 # Default Mount Parameters
-ROOT_DIR = tst
-CLIENT_DIR = home
-CLIENT_NAME = client
+MOUNTPOINT = tst
+HOMEPATH = home
+USERNAME = client
 FUSE_ARGS = -s -f # run in foreground & single-threaded
-CLIENT_ARGS = $(FUSE_ARGS) --root="$(ROOT_DIR)" --dir="$(CLIENT_DIR)" --name="$(CLIENT_NAME)" "$(ROOT_DIR)"
+CLIENT_ARGS = $(FUSE_ARGS) --home=$(HOMEPATH) --name="$(USERNAME)" "$(MOUNTPOINT)"
 
 # TODO -- C header file dependencies
 

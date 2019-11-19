@@ -15,15 +15,20 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "middfs-client-rsrc.h"
-#include "middfs-client.h"
+#include "lib/middfs-conf.h"
+
+#include "client/middfs-client-rsrc.h"
+#include "client/middfs-client.h"
+#include "client/middfs-client-conf.h"
+
 
 /* utility function definitions */
 
 char *middfs_localpath_tmp(const char *middfs_path) {
   char *localpath;
-  asprintf(&localpath, "%s/%s%s", middfs_conf.local_dir,
-	   middfs_conf.client_name, middfs_path);
+  fprintf(stderr, "middfs_localpath_tmp: homepath is ``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
+  asprintf(&localpath, "%s/%s%s", conf_get(MIDDFS_CONF_HOMEPATH),
+           conf_get(MIDDFS_CONF_USERNAME), middfs_path);
   return localpath;
 }
 
@@ -88,7 +93,7 @@ int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc) {
     }
 
     /* find resource type */
-    if (strcmp(client_rsrc->mr_rsrc.mr_owner, middfs_conf.client_name) != 0) {
+    if (strcmp(client_rsrc->mr_rsrc.mr_owner, conf_get(MIDDFS_CONF_USERNAME)) != 0) {
       client_rsrc->mr_type = MR_NETWORK; /* resource not owned by client */
     } else {
       client_rsrc->mr_type = MR_LOCAL; /* resource owned by client */

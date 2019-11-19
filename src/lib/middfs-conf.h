@@ -7,16 +7,10 @@
 
 #include <stdio.h>
 
-/* middfs configuration entry: key-value pair 
- * NOTE: all strings are allocated. 
- */
-struct middfs_conf_kv {
-  char *key;
-  char *val;
-};
-
-int conf_create(const char *confpath, struct middfs_conf_kv kvs[], size_t kvcount);
-void conf_delete(struct middfs_conf_kv kvs[], size_t kvcount);
-
+char *conf_get(const char *name);
+int conf_set(const char *name, const char *value, int overwrite);
+int conf_put(const char *string);
+int conf_unset(const char *name);
+int conf_load(const char *path);
 
 #endif

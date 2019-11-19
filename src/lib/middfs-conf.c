@@ -5,96 +5,97 @@
 #include <stdlib.h>
 #include <string.h>
 #include <search.h>
+#include <errno.h>
 
 #include "lib/middfs-conf.h"
 
-static int conf_cmp(const struct middfs_conf_kv *lhs, const struct middfs_conf_kv *rhs);
-static int conf_parse_line(char *line, struct middfs_conf_kv kvs[], size_t kvcount);
-
-/* conf_create() -- parse configuraiton info given keys.
- * NOTE: values in kv list should be initialized (NULL if they don't have predefined values).
- */
-#define CONF_CREATE_BUFLEN 1024
-int conf_create(const char *confpath, struct middfs_conf_kv kvs[], size_t kvcount) {
-  int retv = -1;
-  
-  /* open file */
-  FILE *fconf;
-  if ((fconf = fopen(confpath, "r")) == NULL) {
-    return -1;
-  }
-
-  /* for each line, update correspondng entry in key-value pair list */
-  char buf[CONF_CREATE_BUFLEN];
-  while (fgets(buf, CONF_CREATE_BUFLEN, fconf) != NULL) {
-    if (conf_parse_line(buf, kvs, kvcount) < 0) {
-      fprintf(stderr, "warning: invalid line in configuration file:\n> ``%s''\n", buf);
-    }
-  }
-
-  if (ferror(fconf) != 0) {
-    perror("conf_create: fgets");
-    retv = -1;
-  }
-
-  /* cleanup */
-  if (fclose(fconf) < 0) {
-    perror("conf_create: fclose");
-    retv = -1;
-  }
-  
-  return retv;
+#define MIDDFS_ENVVAR_FMT "MIDDFS_%s"
+static char *conf_envvar(const char *name) {
+   char *envvar = NULL;
+   if (asprintf(&envvar, MIDDFS_ENVVAR_FMT, name) < 0) {
+      return NULL;      
+   }
+   return envvar;
 }
 
-void conf_delete(struct middfs_conf_kv kvs[], size_t kvcount) {
-  for (size_t i = 0; i < kvcount; ++i) {
-    free(kvs[i].val);
-  }
+char *conf_get(const char *name) {
+   /* format name of environment variable */
+   char *envvar;
+   char *val;
+
+   if ((envvar = conf_envvar(name)) == NULL) {
+      return NULL;
+   }
+
+   fprintf(stderr, "envvar=%s\n", envvar);
+
+   if ((val = getenv(envvar)) == NULL) {
+      errno = EINVAL;
+      perror("getenv");
+   }
+
+   free(envvar);
+   
+   return val;
 }
 
-/* conf_parse_line() -- parse single configuration line 
- * RETV: -1 if invalid; 0 if line empty; 1 if found kv pair.
- */
-static int conf_parse_line(char *line, struct middfs_conf_kv kvs[], size_t kvcount) {
-  char *mid;
-
-  /* strip comment and newline */
-  line[strspn(line, "#\n")] = '\0';
-
-  /* strip leading whitespace */
-  line = line + strspn(line, " \t");
-
-  if (*line == '\0') {
-    return 0; /* empty line */
-  }
-
-  /* separate line around '=' sign */
-  if ((mid = strchr(line, '=')) == NULL) {
-    return -1; /* invalid -- expect kv pair */
-  }
-
-  /* assign key-value parameters */
-  char *key, *val;
-  key = line;
-  val = mid + 1;
-
-  /* find key in kvs list */
-  struct middfs_conf_kv kv = {.key = key, .val = NULL};
-  struct middfs_conf_kv *found;
-  if ((found = lfind(&kv, kvs, &kvcount, sizeof(kv),
-		     (int (*)(const void *, const void *)) conf_cmp)) == NULL) {
-    return 0;
-  }
-
-  /* update kv pair */
-  if (found->val != NULL) {
-    free(found->val);
-  }
-  found->val = strdup(val);
-
-  return 1;
+int conf_set(const char *name, const char *value, int overwrite) {
+   /* STUB */
+   abort();
 }
 
-static int conf_cmp(const struct middfs_conf_kv *lhs, const struct middfs_conf_kv *rhs) {
-  return strcmp(lhs->key, rhs->key);
+int conf_put(const char *string) {
+   char *envstr;
+
+   
+   if ((envstr = conf_envvar(string)) == NULL) {
+      return -1;
+   }
+
+   fprintf(stderr, "conf_put: ``%s''\n", envstr);
+   
+   if (putenv(envstr) < 0) {
+      free(envstr);
+      return -1;
+   }
+
+   return 0;
+}
+
+int conf_unset(const char *name) {
+   /* STUB*/
+   abort();
+}
+
+#define CONF_LOAD_MAXLINE 1024
+int conf_load(const char *path) {
+   int retv = 0;
+   FILE *fconf;
+
+   /* open configuration file */
+   if ((fconf = fopen(path, "r")) == NULL) {
+      return -1;
+   }
+
+   char line[CONF_LOAD_MAXLINE];
+   while (fgets(line, CONF_LOAD_MAXLINE, fconf) != NULL) {
+      /* strip comment & newline */
+      line[strcspn(line, "#\n")] = '\0';
+
+      /* put conf var */
+      if (conf_put(line) < 0) {
+         return -1;
+      }
+   }
+
+   if (ferror(fconf) != 0) {
+      retv = -1;
+   }
+
+   /* cleanup */
+   if (fclose(fconf) < 0) {
+      retv = -1;
+   }
+
+   return retv;
 }

@@ -28,6 +28,7 @@
 #include "lib/middfs-conn.h"
 #include "lib/middfs-pkt.h"
 #include "lib/middfs-util.h"
+#include "lib/middfs-conf.h"
 
 #include "client/middfs-client.h"
 #include "client/middfs-client-ops.h"
@@ -47,40 +48,40 @@ static int client_connect(const char *server_IP, int port, char *username);
  */
 
 struct middfs_opts {
-  int show_help;
-  char *root_dir;
-  char *mirror_dir;
-  char *client_dir;
-  char *client_name;
+   int show_help;
+   char *localport;
+   char *remoteport;
+   char *username;
+   char *confpath;
+   char *homepath;
 };
 
 
 /* GLOBALS */
 
 static const struct fuse_opt option_spec[] =
-  {/* Required Parameters */
-   OPTDEF("--root=%s", root_dir),
-   OPTDEF("--mirror=%s", mirror_dir),
-   OPTDEF("--dir=%s", client_dir),
-   OPTDEF("--name=%s", client_name),
-   /* Optional Parameters */
-   OPTDEF("--help", show_help),   
-   FUSE_OPT_END
+   {/* Required Parameters */
+    /* Optional Parameters */
+    OPTDEF("--localport=%s", localport),
+    OPTDEF("--remoteport=%s", remoteport),
+    OPTDEF("--conf=%s", confpath),
+    OPTDEF("--name=%s", username),
+    OPTDEF("--home=%s", homepath),
+    OPTDEF("--help", show_help),   
+    FUSE_OPT_END
   };
 
 static struct middfs_opts middfs_opts;
-struct middfs_conf middfs_conf;
+// struct middfs_conf middfs_conf;
 
 
 void show_help(const char *arg0) {
   fprintf(stderr,
-	  "usage: %s [option...] dir\n"					\
-	  "Options:\n"							\
-	  " --root=<dir>    middfs directory\n"				\
-	  " --mirror=<dir>  directory to mount mirror of root dir\n"	\
-	  " --dir=<dir>     client directory\n"				\
-	  " --help          display this help dialog\n",
-	  arg0);
+          "usage: %s [option...] dir\n"                  \
+          "Options:\n"                                   \
+          "TODO\n"                                       \
+          " --help          display this help dialog\n",
+          arg0);
 }
 
 
@@ -123,10 +124,26 @@ int main(int argc, char *argv[]) {
   int should_mirror, mounted_mirror;
 
   should_mirror = mounted_mirror = 0;
+
+  /* load configuration from file */
+  char *confpath;
+  if (asprintf(&confpath, "%s/" MIDDFS_CONF_FILENAME, getenv("HOME")) < 0) {
+     perror("asprintf");
+     exit(1);
+  }
+  if (access(confpath, R_OK) == 0) {
+     /* read in config file */
+     fprintf(stderr, "middfs-client: loading configuration from %s\n", confpath);
+     if (conf_load(confpath) < 0) {
+        perror("conf_load");
+        exit(1);
+     }
+  } else {
+     fprintf(stderr, "middfs-client: no configuration file found\n");
+  }
   
   /* set middfs option defaults */
   middfs_defaultopts(&middfs_opts);
-  memset(&middfs_conf, 0, sizeof(middfs_conf));
   
   /* parse options */
   if (fuse_opt_parse(&args, &middfs_opts,
@@ -144,18 +161,13 @@ int main(int argc, char *argv[]) {
   }
 
   /* validate options */
-  int opt_valid = 1;
-  if (middfs_opts.root_dir == NULL) {
-    fprintf(stderr, "%s: required: --root=<path>\n", argv[0]);
-    opt_valid = 0;
-  } else {
-    /* convert to absolute path */
-    if ((errno = -middfs_abspath(&middfs_opts.root_dir)) > 0) {
-      perror("middfs_abspath");
-      goto cleanup;
-    }
+  /* convert to absolute path */
+  if ((errno = -middfs_abspath(&middfs_opts.homepath)) > 0) {
+     perror("middfs_abspath");
+     goto cleanup;
   }
 
+#if 0
   /* NOTE: mirror dir not required. */
   if (middfs_opts.mirror_dir != NULL) {
     should_mirror = 1;
@@ -177,7 +189,7 @@ int main(int argc, char *argv[]) {
       goto cleanup;
     }
   }
-
+  
   if (middfs_opts.client_name == NULL) {
     fprintf(stderr, "%s: required: --name=<path>\n", argv[0]);
     opt_valid = 0;
@@ -204,6 +216,7 @@ int main(int argc, char *argv[]) {
     }
     mounted_mirror = 1;
   }
+#endif
 
   /* connect to server */
   if (client_connect(SERVER_IP, LISTEN_PORT_DEFAULT, "clientA") < 0) {
@@ -225,11 +238,6 @@ int main(int argc, char *argv[]) {
   retv = fuse_main(args.argc, args.argv, &middfs_oper, NULL);
 
  cleanup:
-  if (mounted_mirror) {
-    if (middfs_mirror_unmount(middfs_opts.mirror_dir) < 0) {
-      retv = -1;
-    }
-  }
   fuse_opt_free_args(&args);
   return retv;
 }
@@ -300,6 +308,6 @@ static int client_connect(const char *server_IP, int port, char *username) {
          perror("close");
       }
    }
-
+   
    return retv;
 }

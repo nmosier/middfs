@@ -22,10 +22,12 @@
 #include "lib/middfs-conn.h"
 #include "lib/middfs-pkt.h"
 #include "lib/middfs-util.h"
+#include "lib/middfs-conf.h"
 
 #include "client/middfs-client-ops.h"
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client-handler.h"
+#include "client/middfs-client-conf.h"
 
 /* NOTE: return value is for private context and is passed
  * to all other middfs functions. Don't need to use for now,
@@ -69,6 +71,9 @@ static int middfs_getattr
 #if FUSE == 2
   void *fi = NULL; /* fi parameter is missing in FUSE 2 API */
 #endif
+
+  // DEBUGo
+  fprintf(stderr, "``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
   
   if (fi == NULL) {
     /* create & open temporary resource */
@@ -159,6 +164,9 @@ static int middfs_readdir
   int res;
   struct client_rsrc client_rsrc_tmp;
 
+  /* DEBUGGING */
+  fprintf(stderr, "``%s''", conf_get(MIDDFS_CONF_HOMEPATH));
+  
   /* get resource handle */
   if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
     return retv;
