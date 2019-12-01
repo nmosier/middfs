@@ -35,6 +35,7 @@
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client-responder.h"
 #include "client/middfs-client-handler.h"
+#include "client/middfs-client-conf.h"
 
 #define OPTDEF(t, p) {t, offsetof(struct middfs_opts, p), 1}
 
@@ -219,7 +220,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   /* connect to server */
-  if (client_connect(SERVER_IP, LISTEN_PORT_DEFAULT, "clientA") < 0) {
+  if (client_connect(SERVER_IP, LISTEN_PORT_DEFAULT, conf_get(MIDDFS_CONF_USERNAME)) < 0) {
      perror("client_connect");
      goto cleanup;
   }

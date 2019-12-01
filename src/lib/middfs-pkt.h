@@ -69,6 +69,12 @@ struct middfs_response {
    void *data;
 };
 
+/* CONNECT PACKET
+ * A client sends this packet to the server to connect, i.e. check in.
+ * The client can specify their preferred username.
+ * The server responds with a connect packet confirming the client's connection
+ * and responds with the client's actual username. 
+ */
 struct middfs_connect {
    char *name; /* username of client */
 };
