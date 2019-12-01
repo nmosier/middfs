@@ -26,9 +26,10 @@
 
 char *middfs_localpath_tmp(const char *middfs_path) {
   char *localpath;
-  fprintf(stderr, "middfs_localpath_tmp: homepath is ``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
+  printf("middfs_localpath_tmp: homepath is ``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
   asprintf(&localpath, "%s/%s%s", conf_get(MIDDFS_CONF_HOMEPATH),
            conf_get(MIDDFS_CONF_USERNAME), middfs_path);
+  // fprintf("localpath = ``%s''\n", localpath);
   return localpath;
 }
 
@@ -220,8 +221,10 @@ int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-  case MR_ROOT:
     return -EOPNOTSUPP;
+    
+  case MR_ROOT:
+     return 0;
 
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
