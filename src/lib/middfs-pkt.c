@@ -40,7 +40,8 @@ int packet_send(int fd, const struct middfs_packet *pkt) {
       return -errno;
    }
    while (!buffer_isempty(&buf)) {
-      if (buffer_write(fd, &buf) < 0) {
+      int write_retv;
+      if ((write_retv = buffer_write(fd, &buf)) < 0 && write_retv != EINTR) {
          retv = -errno;
          break;
       }
@@ -65,7 +66,9 @@ int packet_recv(int fd, struct middfs_packet *pkt) {
    
    /* deserialize & read into buffer */
    while ((retv = buffer_deserialize(pkt, (deserialize_f) deserialize_pkt, &buf)) > 0) {
-      if (buffer_read(fd, &buf) < 0) {
+      int read_retv;
+      /* NOTE: Be careful to not treat interrupt as error. */
+      if ((read_retv = buffer_read(fd, &buf)) < 0 && read_retv != EINTR) {
          retv = -errno;
          goto cleanup;
       }

@@ -72,9 +72,6 @@ static int middfs_getattr
   void *fi = NULL; /* fi parameter is missing in FUSE 2 API */
 #endif
 
-  // DEBUGo
-  fprintf(stderr, "``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
-  
   if (fi == NULL) {
     /* create & open temporary resource */
     if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
@@ -508,100 +505,10 @@ static int middfs_read(const char *path, char *buf, size_t size,
     client_rsrc = (struct client_rsrc *) fi->fh;
   }
 
-  // TEST //
-#if 0
-  /* connect to server */
-  int clientfd;
-  if ((clientfd = inet_connect(SERVER_IP, LISTEN_PORT_DEFAULT)) < 0) {
-    perror("inet_connect");
-    goto cleanup;
-  }
-  
-  /* serialize request */
-  
-  struct middfs_packet pkt =
-    {.mpkt_magic = MPKT_MAGIC,
-     .mpkt_type = MPKT_REQUEST,
-     .mpkt_un = {
-          .mpkt_request = 
-          {.mreq_type = MREQ_READ,
-           .mreq_requester = strdup("nicholas"),
-           .mreq_rsrc = client_rsrc->mr_rsrc,
-           .mreq_size = 4096
-          }
-       }
-    };
-
-
-		 
-  struct buffer buf_out = {0};
-
-  if (buffer_serialize(&pkt, (serialize_f) serialize_pkt, &buf_out) < 0) {
-    perror("buffer_serialize");
-    goto cleanup;
-  }
-
-  while (!buffer_isempty(&buf_out) && buffer_write(clientfd, &buf_out) >= 0) {}
-  if (!buffer_isempty(&buf_out)) {
-    perror("buffer_write");
-    goto cleanup;
-  }
-
-#if SHUTDOWN
-  /* shutdown for sending */
-  if (shutdown(clientfd, SHUT_WR) < 0) {
-    perror("shutdown");
-    goto cleanup;
-  }
-#endif
-
-  /* read response */
-  ssize_t bytes_read;
-  struct buffer buf_in;
-  buffer_init(&buf_in);
-
-  while ((bytes_read = buffer_read(clientfd, &buf_in)) > 0) {}
-  if (bytes_read < 0) {
-    perror("read");
-    goto cleanup;
-  }
-
-  /* print out response */
-  size_t nbytes = buffer_used(&buf_in);
-  int err = 0;
-  deserialize_pkt(buf_in.begin, nbytes, &pkt, &err);
-  if (err) {
-    fprintf(stderr, "deserialize_pkt: invalid packet\n");
-    goto cleanup;
-  }
-
-  assert(pkt.mpkt_type == MPKT_RESPONSE);
-  struct middfs_response *rsp = &pkt.mpkt_un.mpkt_response;
-  // fprintf(stderr, "RSP: nbytes = %lu, data = %s\n", rsp->nbytes, rsp->data);
-
-  /* close client socket */
-  if (close(clientfd) < 0) {
-    perror("close");
-    goto cleanup;
-  }
-  
-  
-  /// END TEST ///
-#if READ
-  if ((retv = pread(client_rsrc->mr_fd, buf, size, offset)) < 0) {
-    retv = -errno;
-    goto cleanup;
-  }
-#else
-  retv = MIN(sizerem(rsp->nbytes, offset), size);
-  memcpy(buf, (uint8_t *) rsp->data + offset, retv);
-#endif
-#else
   if ((retv = client_rsrc_read(client_rsrc, buf, size, offset)) < 0) {
      errno = -retv;
      perror("client_rsrc_read");
   }
-#endif
   
  cleanup:
   /* delete temporary resource if needed */

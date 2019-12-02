@@ -151,7 +151,9 @@ int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    return -EOPNOTSUPP;
+     /* TODO: This is a purely temporary measure. 
+      * Write some REAL code next time. */
+     return 0;
     
   case MR_LOCAL:
     /* open local file */
@@ -174,19 +176,32 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
   int retv = 0;
   char *localpath = NULL;
 
+  memset(sb, 0, sizeof(*sb)); /* initialize buffer */
+
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-    return -EOPNOTSUPP;
-    
+     /* TODO: This is slapdash code. Fix later. */
+     /* check if path is dir or reg file */
+     if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
+        /* is a regular file */
+        sb->st_mode = S_IFREG | S_IRUSR | S_IRGRP;
+     } else {
+        /* is a directory */
+        sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;        
+     }
+     sb->st_uid = getuid();
+     sb->st_gid = getgid();
+     sb->st_size = 64; /* TODO: ... */
+     return 0;
+     
   case MR_ROOT: /* stat info for middfs mountpoint */
-     memset(sb, 0, sizeof(*sb)); /* initialize buffer */
-
-    /* mark as directory, read-only for owner & group */
-    sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;
-    sb->st_uid = getuid(); /* owner is owner of this FUSE process */
-    sb->st_gid = getgid(); /* group is group of this FUSE process */
-    return 0;
-    
+     
+     /* mark as directory, read-only for owner & group */
+     sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;
+     sb->st_uid = getuid(); /* owner is owner of this FUSE process */
+     sb->st_gid = getgid(); /* group is group of this FUSE process */
+     return 0;
+     
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (lstat(localpath, sb) < 0) {
@@ -229,8 +244,6 @@ int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-    return -EOPNOTSUPP;
-    
   case MR_ROOT:
      return 0;
 
@@ -440,8 +453,8 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          int fd = -1;
          const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
          const char *serverport_str = conf_get(MIDDFS_CONF_SERVERPORT);
-         assert(*serverip);
-         assert(*serverport_str);
+         assert(serverip && *serverip);
+         assert(serverport_str && *serverport_str);
          
          if ((fd = inet_connect(serverip, atoi(serverport_str))) < 0) {
             return -errno;
