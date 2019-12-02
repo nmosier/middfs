@@ -29,3 +29,8 @@ attach:
 .PHONY: kill
 kill:
 	kill -TERM `pgrep $(BIN)`
+
+.PHONY: mount
+mount:
+	$(realpath $(BIN)) 1 # dummy param
+

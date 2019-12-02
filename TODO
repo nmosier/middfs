@@ -23,7 +23,8 @@ TODO
 [ ] sockinfos to linked list
 [ ] server responds with actual username of client
     (resolves naming conflicts)
-
+[ ] define new response type that notifies the requester that the
+    other client is not online.
 
 
 TODO -- CLIENT

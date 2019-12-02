@@ -12,7 +12,7 @@
 #include "server/middfs-server-handler.h"
 #include "server/middfs-server.h"
 
-#define CLIENTB "140.233.167.124" // nmosier's MacBook
+// #define CLIENTB "140.233.167.124" // nmosier's MacBook
 
 static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt);
@@ -71,12 +71,24 @@ static enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
 /* Packet-type specific handlers */
 static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt) {
-   assert(sockinfo->state == MSS_REQRD);
-
    int tmpfd;
+
+   assert(sockinfo->state == MSS_REQRD);
+   assert(in_pkt->mpkt_type == MPKT_REQUEST);
    
    sockinfo->state = MSS_REQFWD; /* exclusively forward for now. */
-   if ((tmpfd = inet_connect(CLIENTB, LISTEN_PORT_DEFAULT)) < 0) {
+
+   /* check if client is online */
+   const char *recipient_name = in_pkt->mpkt_un.mpkt_request.mreq_rsrc.mr_owner;
+   const struct client *recipient_info;
+   if ((recipient_info = client_find(recipient_name, &clients)) == NULL) {
+      /* could not find recipient in client list */
+      /* TODO: Special response type to handle this situation? */
+      fprintf(stderr, "client_find: client ``%s'' not found\n", recipient_name);
+      return HS_DEL; /* Bye bye! */
+   }
+   
+   if ((tmpfd = inet_connect(recipient_info->IP, LISTEN_PORT_DEFAULT)) < 0) {
       perror("inet_connect");
       return HS_DEL;
    }
