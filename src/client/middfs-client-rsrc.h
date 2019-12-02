@@ -49,5 +49,7 @@ int client_rsrc_rename(const struct client_rsrc *from,
 		       const struct client_rsrc *to);
 int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode);
 
+int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t size, off_t offset);
+
 
 #endif

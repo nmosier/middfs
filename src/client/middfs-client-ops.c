@@ -509,7 +509,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
   }
 
   // TEST //
-
+#if 0
   /* connect to server */
   int clientfd;
   if ((clientfd = inet_connect(SERVER_IP, LISTEN_PORT_DEFAULT)) < 0) {
@@ -577,7 +577,7 @@ static int middfs_read(const char *path, char *buf, size_t size,
 
   assert(pkt.mpkt_type == MPKT_RESPONSE);
   struct middfs_response *rsp = &pkt.mpkt_un.mpkt_response;
-  fprintf(stderr, "RSP: nbytes = %lu, data = %s\n", rsp->nbytes, rsp->data);
+  // fprintf(stderr, "RSP: nbytes = %lu, data = %s\n", rsp->nbytes, rsp->data);
 
   /* close client socket */
   if (close(clientfd) < 0) {
@@ -596,9 +596,13 @@ static int middfs_read(const char *path, char *buf, size_t size,
   retv = MIN(sizerem(rsp->nbytes, offset), size);
   memcpy(buf, (uint8_t *) rsp->data + offset, retv);
 #endif
-
+#else
+  if ((retv = client_rsrc_read(client_rsrc, buf, size, offset)) < 0) {
+     errno = -retv;
+     perror("client_rsrc_read");
+  }
+#endif
   
-
  cleanup:
   /* delete temporary resource if needed */
   if (fi == NULL) {

@@ -14,8 +14,11 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <assert.h>
 
 #include "lib/middfs-conf.h"
+#include "lib/middfs-pkt.h"
+#include "lib/middfs-util.h"
 
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client.h"
@@ -61,6 +64,11 @@ int middfs_abspath(char **path) {
   }
 }
 
+
+/* client_rsrc_* FUNCTIONS
+ * NOTE: All client_rsrc_* functions return negated error codes directly
+ * (e.g. return -errno).
+ */
 
 /* client_rsrc_create() -- construct resource from path
  * ARGS:
@@ -193,7 +201,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 }
 
 int client_rsrc_readlink(const struct client_rsrc *client_rsrc,
-			 char *buf, size_t bufsize) {
+                         char *buf, size_t bufsize) {
   int retv = 0;
   char *localpath = NULL;
 
@@ -409,8 +417,77 @@ int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode) {
   
 }
 
+int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t size, off_t offset) {
+   int retv = 0;
+
+   switch (client_rsrc->mr_type) {
+   case MR_NETWORK:
+      {
+         /* construct packet */
+         struct middfs_packet pkt =
+            {.mpkt_magic = MPKT_MAGIC,
+             .mpkt_type = MPKT_REQUEST,
+             .mpkt_un = {.mpkt_request = {.mreq_type = MREQ_READ,
+                                          .mreq_requester = strdup(conf_get(MIDDFS_CONF_USERNAME)),
+                                          .mreq_rsrc = client_rsrc->mr_rsrc,
+                                          .mreq_size = size,
+                                          .mreq_off = offset
+                                          }
+                         }
+            };
+
+         /* open connection with server */
+         int fd = -1;
+         const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
+         const char *serverport_str = conf_get(MIDDFS_CONF_SERVERPORT);
+         assert(*serverip);
+         assert(*serverport_str);
+         
+         if ((fd = inet_connect(serverip, atoi(serverport_str))) < 0) {
+            return -errno;
+         }
+         
+         /* send packet */
+         if ((retv = packet_send(fd, &pkt)) < 0) {
+            goto cleanup_network;
+         }
+
+         /* read response */
+         if ((retv = packet_recv(fd, &pkt)) < 0) {
+            goto cleanup_network;
+         }
+
+         /* validate response */
+         assert(pkt.mpkt_magic == MPKT_MAGIC);
+         assert(pkt.mpkt_type == MPKT_RESPONSE);
+
+         /* copy data from response */
+         size_t nbytes = MIN(size, pkt.mpkt_un.mpkt_response.nbytes);
+         memcpy(buf, pkt.mpkt_un.mpkt_response.data, nbytes);
+         retv = nbytes;
+
+      cleanup_network:
+         if (fd >= 0) {
+            close(fd);
+         }
+         /* TODO: Delete packet. */
+         
+         return retv;
+      }
+         
+   case MR_ROOT:
+      return -EOPNOTSUPP;
+      
+   case MR_LOCAL:
+      if ((retv = pread(client_rsrc->mr_fd, buf, size, offset)) < 0) {
+         retv = -errno;
+      }
+      return retv;
+   }
+}
+
 
 /***********************************
  *    Network-Related Functions    *
  ***********************************/
- 
+

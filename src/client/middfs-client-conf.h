@@ -7,8 +7,9 @@
 
 #define MIDDFS_CONF_USERNAME "username"
 #define MIDDFS_CONF_LOCALPORT "localport"
-#define MIDDFS_CONF_REMOTEPORT "remoteport"
+#define MIDDFS_CONF_SERVERPORT "serverport"
 #define MIDDFS_CONF_MOUNTPOINT "mountpoint"
 #define MIDDFS_CONF_HOMEPATH "homepath"
+#define MIDDFS_CONF_SERVERIP "serverip"
 
 #endif

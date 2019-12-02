@@ -11,6 +11,9 @@ DONE
 [X] Write serialization functions
 [X] Delete MFD_SREQ
 
+CURRENT
+[ ] get middfs_read() working with local/network.
+
 TODO
 [X] extricate server-dependent functionality from lib/conn.[ch]
 [X] get client "request listener" up and running
@@ -18,6 +21,9 @@ TODO
 [ ] configuration file to store vars including: (*) client name,
     (*) server address, etc.
 [ ] sockinfos to linked list
+[ ] server responds with actual username of client
+    (resolves naming conflicts)
+
 
 
 TODO -- CLIENT

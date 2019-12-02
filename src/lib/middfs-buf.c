@@ -197,3 +197,30 @@ ssize_t buffer_serialize(const void *in, serialize_f serialf, struct buffer *buf
   
   return used;
 }
+
+/* buffer_deserialize() -- deserialize buffer into datatype
+ * ARGS:
+ *  - out: pointer output value to deserialize into 
+ *  - deserialf: function to deserialize data
+ *  - buf: buffer containing the data to deserialize
+ * RETV: -1 on error; 0 on success; 1 if more bytes needed
+ * NOTE: unlike buffer_serialize(), this function can fail if not enough bytes are available.
+ */
+ssize_t buffer_deserialize(void *out, deserialize_f deserialf, struct buffer *buf) {
+   size_t used = buffer_used(buf);
+   size_t required;
+
+   int err = 0;
+   required = deserialf(buf->begin, used, out, &err);
+   if (err) {
+      return -1;
+   }
+
+   /* shift out bytes */
+   if (required <= used) {
+      buffer_shift(buf, required);
+      return 0; /* successfully deserialized */
+   }
+
+   return 1; /* need more bytes to deserialize */
+}

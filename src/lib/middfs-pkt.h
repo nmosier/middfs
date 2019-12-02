@@ -100,5 +100,8 @@ int packet_handle_connect(struct middfs_packet *pkt);
 int packet_handle_disconnect(struct middfs_packet *pkt);
 int packet_handle_request(struct middfs_packet *pkt);
 
+/* Blocking Packet I/O */
+int packet_send(int fd, const struct middfs_packet *pkt);
+int packet_recv(int fd, struct middfs_packet *pkt);
 
 #endif

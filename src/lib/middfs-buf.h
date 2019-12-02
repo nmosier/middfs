@@ -13,14 +13,15 @@ struct buffer {
   void *end;
 };
 
+void buffer_init(struct buffer *buf);
+void buffer_delete(struct buffer *buf);
+
 size_t buffer_size(const struct buffer *buf);
 size_t buffer_used(const struct buffer *buf);
 size_t buffer_rem(const struct buffer *buf);
 int buffer_resize(struct buffer *buf, size_t newsize);
 void buffer_empty(struct buffer *buf);
 void buffer_shift(struct buffer *buf, size_t shift);
-void buffer_init(struct buffer *buf);
-void buffer_delete(struct buffer *buf);
 int buffer_increase(struct buffer *buf);
 int buffer_isempty(const struct buffer *buf);
 void buffer_advance(struct buffer *buf, size_t nbytes);
@@ -31,5 +32,6 @@ ssize_t buffer_copy(struct buffer *buf, void *in, size_t nbytes);
 #include "middfs-serial.h"
 
 ssize_t buffer_serialize(const void *in, serialize_f serialf, struct buffer *buf);
+ssize_t buffer_deserialize(void *out, deserialize_f deserialf, struct buffer *buf);
 
 #endif

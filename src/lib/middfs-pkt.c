@@ -6,7 +6,8 @@
 #include <errno.h>
 #include <stdbool.h>
 
-#include "middfs-pkt.h"
+#include "lib/middfs-pkt.h"
+#include "lib/middfs-buf.h"
 
 bool req_has_mode(enum middfs_request_type type) {
   return type == MREQ_ACCESS || type == MREQ_CHMOD || type == MREQ_CREATE || type == MREQ_OPEN;
@@ -24,46 +25,58 @@ bool req_has_off(enum middfs_request_type type) {
   return type == MREQ_READ || type == MREQ_WRITE;
 }
 
-#if 0
-int packet_handle(struct middfs_packet *pkt) {
-  const packet_handle_f handlers[MPKT_NTYPES] =
-    {[MPKT_NONE] = packet_handle_none,
-     [MPKT_CONNECT] = packet_handle_connect,
-     [MPKT_DISCONNECT] = packet_handle_disconnect,
-     [MPKT_REQUEST] = packet_handle_request,
-    };
-  int retv = 0;
-						 
-  /* validate packet */
-  if (pkt->mpkt_magic != MPKT_MAGIC) {
-    return -EINVAL; /* invalid magic number */
-  }
-  if (pkt->mpkt_type >= MPKT_NTYPES) {
-    return -EINVAL; /* invalid packet type */
-  }
+/* packet_send() -- send a packet over the given socket fd 
+ * ARGS:
+ *  - fd: socket file descriptor to write packet over 
+ *  - pkt: packet to send 
+ * RETV: 0 on success; negated error code on error.
+ */
+int packet_send(int fd, const struct middfs_packet *pkt) {
+   int retv = 0;
+   struct buffer buf;
+   buffer_init(&buf);
 
-  /* call packet handler */
-  retv = handlers[pkt->mpkt_type](pkt);
+   if (buffer_serialize(pkt, (serialize_f) serialize_pkt, &buf) < 0) {
+      return -errno;
+   }
+   while (!buffer_isempty(&buf)) {
+      if (buffer_write(fd, &buf) < 0) {
+         retv = -errno;
+         break;
+      }
+   }
 
-  return retv;
+   /* cleanup */
+   buffer_delete(&buf);
+
+   return retv;
 }
 
-
-int packet_handle_none(struct middfs_packet *pkt) {
-  abort();
+/* packet_recv() -- receive a packet over the given socket fd
+ * ARGS:
+ *  - fd: socket file descriptor to receive packet over
+ *  - pkt: pointer to packet to deserialize into 
+ * RETV: 0 on success; negated error code on error.
+ */
+int packet_recv(int fd, struct middfs_packet *pkt) {
+   int retv = 0;
+   struct buffer buf;
+   buffer_init(&buf);
+   
+   /* deserialize & read into buffer */
+   while ((retv = buffer_deserialize(pkt, (deserialize_f) deserialize_pkt, &buf)) > 0) {
+      if (buffer_read(fd, &buf) < 0) {
+         retv = -errno;
+         goto cleanup;
+      }
+   }
+   if (retv < 0) {
+      retv = -errno;
+   }
+   
+ cleanup:
+   buffer_delete(&buf);
+   
+   return retv;
 }
-
-int packet_handle_connect(struct middfs_packet *pkt) {
-  return -EOPNOTSUPP;
-}
-
-int packet_handle_disconnect(struct middfs_packet *pkt) {
-  return -EOPNOTSUPP;
-}
-
-int packet_handle_request(struct middfs_packet *pkt) {
-  /* TODO: stub */
-
-  return -EOPNOTSUPP;
-}
-#endif
+            
