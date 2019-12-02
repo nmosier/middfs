@@ -29,10 +29,8 @@
 
 char *middfs_localpath_tmp(const char *middfs_path) {
   char *localpath;
-  printf("middfs_localpath_tmp: homepath is ``%s''\n", conf_get(MIDDFS_CONF_HOMEPATH));
   asprintf(&localpath, "%s/%s%s", conf_get(MIDDFS_CONF_HOMEPATH),
            conf_get(MIDDFS_CONF_USERNAME), middfs_path);
-  // fprintf("localpath = ``%s''\n", localpath);
   return localpath;
 }
 
