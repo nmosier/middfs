@@ -25,5 +25,6 @@ size_t smin(size_t s1, size_t s2);
 size_t smax(size_t s1, size_t s2);
 
 int inet_connect(const char *IP_addr, int port);
+void *memdup(const void *ptr, size_t size);
 
 #endif

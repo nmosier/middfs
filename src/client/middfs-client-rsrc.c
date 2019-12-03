@@ -497,6 +497,78 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
    }
 }
 
+int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
+                      size_t size, off_t offset) {
+   int retv = 0;
+
+   switch (client_rsrc->mr_type) {
+   case MR_NETWORK:
+      {
+         /* construct packet */
+         char *username = conf_get(MIDDFS_CONF_USERNAME);
+         char *username_dup;
+         void *buf_dup;
+         
+         assert(username && *username);
+         username_dup = strdup(username);
+         buf_dup = memdup(buf, size);
+
+         if (buf_dup == NULL || username_dup == NULL) {
+            free(buf_dup);
+            free(username_dup);
+            return -errno;
+         }
+         
+         struct middfs_packet pkt =
+            {.mpkt_magic = MPKT_MAGIC,
+             .mpkt_type = MPKT_REQUEST,
+             .mpkt_un = {.mpkt_request = {.mreq_type = MREQ_WRITE,
+                                          .mreq_requester = username_dup,
+                                          .mreq_rsrc = client_rsrc->mr_rsrc,
+                                          .mreq_size = size,
+                                          .mreq_off = offset,
+                                          .mreq_data = buf_dup
+                                          }
+                         }
+            };
+
+         /* open connection with server */
+         int fd = -1;
+         const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
+         const char *serverport_str = conf_get(MIDDFS_CONF_SERVERPORT);
+         assert(serverip && *serverip);
+         assert(serverport_str && *serverport_str);
+
+         if ((fd = inet_connect(serverip, atoi(serverport_str))) < 0) {
+            return -errno;
+         }
+
+         retv = packet_send(fd, &pkt);
+
+         /* NOTE: don't read response.
+          * TODO: read response. */
+
+         /* cleanup */
+         if (fd >= 0) {
+            close(fd);
+         }
+         
+         return retv;
+      }
+      
+   case MR_ROOT:
+      return -EOPNOTSUPP;
+      
+   case MR_LOCAL:
+      if ((retv = pwrite(client_rsrc->mr_fd, buf, size, offset)) < 0) {
+         retv = -errno;
+      }
+      return retv;
+      
+   default:
+      abort();
+   }
+}
 
 /***********************************
  *    Network-Related Functions    *

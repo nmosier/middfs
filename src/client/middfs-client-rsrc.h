@@ -50,6 +50,8 @@ int client_rsrc_rename(const struct client_rsrc *from,
 int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode);
 
 int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t size, off_t offset);
+int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
+                      size_t size, off_t offset);
 
 
 #endif

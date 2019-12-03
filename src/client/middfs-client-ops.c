@@ -539,10 +539,17 @@ static int middfs_write(const char *path, const char *buf,
     client_rsrc = (struct client_rsrc *) fi->fh;
   }
 
+#if 0
   if ((retv = pwrite(client_rsrc->mr_fd, buf, size, offset)) < 0) {
     retv = -errno;
     goto cleanup;
   }
+#else
+  if ((retv = client_rsrc_write(client_rsrc, buf, size, offset)) < 0) {
+     errno = -retv;
+     perror("client_rsrc_write");
+  }
+#endif
 
  cleanup:
   if (fi == NULL) {

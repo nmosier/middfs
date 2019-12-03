@@ -55,6 +55,7 @@ struct middfs_request {
   uint64_t mreq_size; /* readlink, truncate, read, write */
   char *mreq_to;    /* symlink, rename */
   uint64_t mreq_off;  /* read, write */
+   void *mreq_data; /* write */
   
   /* (none): getattr, unlink, getattr, rmdir, readdir */
 };

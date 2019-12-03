@@ -25,7 +25,8 @@ TODO
     (resolves naming conflicts)
 [ ] define new response type that notifies the requester that the
     other client is not online.
-
+[ ] factor out identical code in handle_request_{read,write} functions
+[ ] Add code in client_rsrc_create() to open a network socket if the resource resides on the net.
 
 TODO -- CLIENT
 

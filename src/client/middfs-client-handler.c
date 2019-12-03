@@ -91,25 +91,33 @@ struct handler_info client_hi =
 
 
 
-static enum handler_e handle_request_read(const struct middfs_request *req,
-                                     struct middfs_response *rsp);
+static enum handler_e handle_request_read(const char *path, const struct middfs_request *req,
+                                          struct middfs_response *rsp);
+static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,
+                                           struct middfs_response *rsp);
 
 /* handle_request() -- handle a request and queue a response (if necessary).
  */
 static enum handler_e handle_request(const struct middfs_packet *in_pkt,
                                      struct middfs_packet *out_pkt) {
+   enum handler_e retv = HS_DEL;
    const struct middfs_request *req = &in_pkt->mpkt_un.mpkt_request;
    struct middfs_response *rsp = &out_pkt->mpkt_un.mpkt_response;
+   char *path = NULL;
 
    /* response packet setup */
    out_pkt->mpkt_magic = MPKT_MAGIC;
    out_pkt->mpkt_type = MPKT_RESPONSE;
+
+   /* construct path */
+   path = middfs_localpath_tmp(req->mreq_rsrc.mr_path);
    
    switch (req->mreq_type) {
    case MREQ_NONE:
       /* Then why the hell did you contact me? */
       fprintf(stderr, "handle_request: request of type ``MREQ_NONE''\n");
-      return HS_DEL;
+      retv = HS_DEL;
+      break;
 
    case MREQ_GETATTR:
    case MREQ_ACCESS:
@@ -123,35 +131,37 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_TRUNCATE:
    case MREQ_OPEN:
    case MREQ_CREATE:
-   case MREQ_WRITE:
    case MREQ_READDIR:
       fprintf(stderr, "handle_request: request not implemented yet\n");
-      return HS_DEL;
+      retv = HS_DEL;
+      break;
 
    case MREQ_READ:
-      return handle_request_read(req, rsp);
+      retv = handle_request_read(path, req, rsp);
+      break;
+
+   case MREQ_WRITE:
+      retv = handle_request_write(path, req, NULL);
+      break;
       
    default:
       fprintf(stderr, "handle_request: unknown type %d\n", req->mreq_type);
-      return HS_DEL;
+      retv = HS_DEL;
+      break;
    }
+
+   /* cleanup */
+   free(path);
+   
+   return retv;
 }
 
-/* Two types of request handling functions: (i) those that require responses, 
- * and (ii) those that do not. */
-
-
-static enum handler_e handle_request_read(const struct middfs_request *req,
+static enum handler_e handle_request_read(const char *path, const struct middfs_request *req,
                                           struct middfs_response *rsp) {
    enum handler_e retv = HS_DEL;
-   char *path = NULL;
    int fd = -1;
    char *buf;
-   
-   
-   /* get file path */
-   path = middfs_localpath_tmp(req->mreq_rsrc.mr_path);
-
+      
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
       perror("open");
@@ -183,10 +193,46 @@ static enum handler_e handle_request_read(const struct middfs_request *req,
    retv = HS_SUC;
    
  cleanup:
-   free(path);
    if (retv == HS_DEL) {
       free(buf);
    }
+   if (fd >= 0) {
+      close(fd);
+   }
+   
+   return retv;
+}
+
+static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,
+                                           struct middfs_response *rsp) {
+   enum handler_e retv = HS_DEL;
+   int fd = -1;
+   char *buf = req->mreq_data;
+   
+   /* open file */
+   if ((fd = open(path, O_WRONLY)) < 0) {
+      perror("open");
+      goto cleanup;
+   }
+
+   /* get write info */
+   off_t offset = req->mreq_off;
+   size_t size = req->mreq_size;
+
+   /* write */
+   ssize_t bytes_written;
+   if ((bytes_written = pwrite(fd, buf, size, offset)) < 0) {
+      perror("write");
+      goto cleanup;
+   }
+   
+   /* construct response */
+   /* TODO: Create adequate response type first. 
+    * For now, drop the connection. 
+    */
+   retv = HS_DEL;
+   
+ cleanup:
    if (fd >= 0) {
       close(fd);
    }

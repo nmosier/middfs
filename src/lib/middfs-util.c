@@ -54,3 +54,16 @@ int inet_connect(const char *IP_addr, int port) {
   return sockfd; /* success */
 }
 
+/* memdup() -- duplicate a range of memory
+ * ARGS:
+ * RETV:
+ */
+void *memdup(const void *ptr, size_t size) {
+   void *newptr;
+
+   if ((newptr = malloc(size)) != NULL) {
+      memcpy(newptr, ptr, size);
+   }
+
+   return newptr;
+}
