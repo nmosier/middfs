@@ -39,6 +39,13 @@ int server_start(const char *port, int backlog, struct middfs_socks *socks) {
     return -1;
   }
 
+  /* reuse the bloody address! */
+  int reuseaddr = 1;
+  if (setsockopt(servsock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(int)) < 0) {
+    perror("setsockopt");
+    return -1;
+  }
+
   /* get address info */
   struct addrinfo hints = {0};
   hints.ai_family = AF_INET;
