@@ -182,10 +182,10 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      /* check if path is dir or reg file */
      if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
         /* is a regular file */
-        sb->st_mode = S_IFREG | S_IRUSR | S_IRGRP;
+        sb->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
      } else {
         /* is a directory */
-        sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;        
+        sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
      }
      sb->st_uid = getuid();
      sb->st_gid = getgid();
