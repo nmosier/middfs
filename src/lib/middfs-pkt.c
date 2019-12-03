@@ -25,6 +25,10 @@ bool req_has_off(enum middfs_request_type type) {
   return type == MREQ_READ || type == MREQ_WRITE;
 }
 
+bool req_has_data(enum middfs_request_type type) {
+   return type == MREQ_WRITE;
+}
+
 /* packet_send() -- send a packet over the given socket fd 
  * ARGS:
  *  - fd: socket file descriptor to write packet over 

@@ -350,6 +350,14 @@ size_t serialize_request(const struct middfs_request *req, void *buf,
   if (req_has_off(type)) {
      used += serialize_uint64((int32_t) req->mreq_off, buf_ + used, sizerem(nbytes, used));
   }
+
+  /* serialize _data_ */
+  if (req_has_data(type)) {
+     if (sizerem(nbytes, used) >= req->mreq_size) {
+        memcpy(buf_ + used, req->mreq_data, req->mreq_size);
+     }
+     used += req->mreq_size;
+  }
   
   return used;
 }
@@ -364,7 +372,6 @@ size_t deserialize_request(const void *buf, size_t nbytes,
     return 0;
   }
 
-  /* TODO: write serialize_uint deserialize_uint */
   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used),
 			     (uint32_t *) &req->mreq_type, errp);
   used += deserialize_str(buf_ + used, sizerem(nbytes, used),
@@ -390,6 +397,21 @@ size_t deserialize_request(const void *buf, size_t nbytes,
   }
   if (req_has_off(type)) {
     used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &req->mreq_off, errp);
+  }
+
+  /* stop if already exceeded allowance */
+  if (used > nbytes) {
+     return used;
+  }
+  
+  if (req_has_data(type)) {
+     if (sizerem(nbytes, used) >= req->mreq_size) {
+        if ((req->mreq_data = memdup(buf_ + used, req->mreq_size)) == NULL) {
+           *errp = 1;
+           return 0;
+        }
+     }
+     used += req->mreq_size;
   }
 
   return *errp ? 0 : used;

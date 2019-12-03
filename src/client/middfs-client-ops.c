@@ -317,23 +317,9 @@ static int middfs_rename
   
 }
 
-#if 0 // No hardlinks supported yet
 static int middfs_link(const char *from, const char *to) {
-  int retv = 0;
-  char *local_from, *local_to;
-
-  local_from = middfs_localpath(from);
-  local_to = middfs_localpath(to);
-
-  if (link(local_from, local_to) < 0) {
-    retv = -errno;
-  }
-
-  free(local_from);
-  free(local_to);
-  return retv;
+   abort();
 }
-#endif
 
 static int middfs_chmod
 (
@@ -374,22 +360,10 @@ static int middfs_chmod
   return retv;
 }
 
-#if 0 /* no changing ownership of local files for now */
 static int middfs_chown(const char *path, uid_t uid, gid_t gid,
 			struct fuse_file_info *fi) {
-  int retv = 0;
-  char *localpath = NULL;
-
-  localpath = middfs_localpath(path);
-
-  if (lchown(localpath, uid, gid) < 0) {
-    retv = -errno;
-  }
-
-  free(localpath);
-  return retv;  
+   abort();
 }
-#endif
 
 static int middfs_truncate
 (
@@ -578,15 +552,18 @@ static int middfs_release(const char *path,
   retv = client_rsrc_delete(client_rsrc);
   free(client_rsrc);
 
+  errno = ENOENT; /* TEST */
+  
   return retv;
 }
+
 
 struct fuse_operations middfs_oper =
   {.init = middfs_init,
    .getattr = middfs_getattr,
    .access = middfs_access,
    .readlink = middfs_readlink,
-#if 0   
+#if 0
    .mknod = middfs_mknod,
 #endif
    .mkdir = middfs_mkdir,
@@ -594,13 +571,9 @@ struct fuse_operations middfs_oper =
    .unlink = middfs_unlink,
    .rmdir = middfs_rmdir,
    .rename = middfs_rename,
-#if 0   
-   .link = middfs_link,
-#endif   
+   .link = middfs_link, /* not supported */
    .chmod = middfs_chmod,
-#if 0
-   .chown = middfs_chown,
-#endif
+   .chown = middfs_chown, /* not supported */
    .truncate = middfs_truncate,
    .open = middfs_open,
    .create = middfs_create,

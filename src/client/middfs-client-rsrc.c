@@ -24,6 +24,9 @@
 #include "client/middfs-client.h"
 #include "client/middfs-client-conf.h"
 
+/* DEBUGGING */
+#define STAT_EXAMPLE_REG "/write"
+#define STAT_EXAMPLE_DIR "/dir"
 
 /* utility function definitions */
 
@@ -181,21 +184,39 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      /* TODO: This is slapdash code. Fix later. */
      /* check if path is dir or reg file */
      if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
+#if 1
+        char *tmp_path = middfs_localpath_tmp(STAT_EXAMPLE_REG);
+
+        int lstat_retv = lstat(tmp_path, sb);
+        assert(lstat_retv >= 0);
+#else        
         /* is a regular file */
-        sb->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+        sb->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;
+#endif       
      } else {
+#if 1
+        char *tmp_path = middfs_localpath_tmp(STAT_EXAMPLE_DIR);
+        int lstat_retv = lstat(tmp_path, sb);
+        assert(lstat_retv >= 0);
+#else
         /* is a directory */
-        sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+        sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;
+#endif
      }
+     #if 0
      sb->st_uid = getuid();
      sb->st_gid = getgid();
      sb->st_size = 64; /* TODO: ... */
+     sb->st_blksize = 4096;
+     sb->st_blocks = 1;
+     sb->st_nlink = 1;
+#endif
      return 0;
      
   case MR_ROOT: /* stat info for middfs mountpoint */
      
      /* mark as directory, read-only for owner & group */
-     sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP;
+     sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;              /* fis ti*/
      sb->st_uid = getuid(); /* owner is owner of this FUSE process */
      sb->st_gid = getgid(); /* group is group of this FUSE process */
      return 0;
@@ -553,7 +574,7 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
             close(fd);
          }
          
-         return retv;
+         return (retv < 0) ? retv : size;
       }
       
    case MR_ROOT:
