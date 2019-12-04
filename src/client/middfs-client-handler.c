@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "lib/middfs-handler.h"
 #include "lib/middfs-conn.h"
@@ -160,12 +161,12 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
                                           struct middfs_response *rsp) {
    enum handler_e retv = HS_DEL;
    int fd = -1;
-   char *buf;
+   char *buf = NULL;
       
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
-      perror("open");
-      goto cleanup;
+     fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
+     goto cleanup;
    }
 
    /* get read info */
@@ -194,7 +195,7 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    
  cleanup:
    if (retv == HS_DEL) {
-      free(buf);
+     free(buf);
    }
    if (fd >= 0) {
       close(fd);
