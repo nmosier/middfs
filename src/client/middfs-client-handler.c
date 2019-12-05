@@ -59,6 +59,7 @@ static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
   /* Update state of socket for writing response */
   sockinfo->state = MSS_RSPWR;
   sockinfo->out.fd = sockinfo->in.fd;
+  sockinfo->in.fd = -1;
 
   return HS_SUC; /* keep socket open */
 }
