@@ -550,23 +550,22 @@ size_t deserialize_int64(const void *buf, size_t nbytes,
 size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes) {
    uint8_t *buf_ = (uint8_t *) buf;
    size_t used = 0;
+   uint64_t data_nbytes;
 
    /* serialize type first */
    used += serialize_int32(rsp->mrsp_type, buf_ + used, sizerem(nbytes, used));
 
    switch (rsp->mrsp_type) {
    case MRSP_OK:
-      /* check if data is present */
-      if (rsp->mrsp_un.mrsp_data.mrsp_buf != NULL && rsp->mrsp_un.mrsp_data.mrsp_nbytes != 0) {
-         /* serialize data */
-         used += serialize_uint64(rsp->mrsp_un.mrsp_data.mrsp_nbytes,
-                                  buf_ + used, sizerem(nbytes, used)); /* size bytes */
-         if (rsp->mrsp_un.mrsp_data.mrsp_nbytes <= sizerem(nbytes, used)) {
-            memcpy(buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_buf,
-                   rsp->mrsp_un.mrsp_data.mrsp_nbytes);
-         }
-         used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      data_nbytes = rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      
+      /* serialize data size */
+      used += serialize_uint64(data_nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
+      if (data_nbytes > 0 && data_nbytes <= sizerem(nbytes, used)) {
+         /* serialize buffer */
+         memcpy(buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_buf, rsp->mrsp_un.mrsp_data.mrsp_nbytes);
       }
+      used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
       break;
       
    case MRSP_ERR:
@@ -584,6 +583,7 @@ size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes
 size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *rsp, int *errp) {
    const uint8_t *buf_ = (const uint8_t *) buf;
    size_t used = 0;
+   uint64_t data_nbytes;
 
 
    /* deserialize type */
@@ -598,19 +598,21 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
    case MRSP_OK:
       used += deserialize_uint64(buf_ + used, sizerem(nbytes, used),
                                  &rsp->mrsp_un.mrsp_data.mrsp_nbytes, errp);
-      /* NOTE: The double comparison of sizerem() is necessary, as rsp->nbytes will only be valid
-       * when sizerem() > 0. */
-      if (*errp == 0 && sizerem(nbytes, used) >= 0 &&
-          sizerem(nbytes, used) >= rsp->mrsp_un.mrsp_data.mrsp_nbytes
-          && rsp->mrsp_un.mrsp_data.mrsp_nbytes > 0) {
-         if ((rsp->mrsp_un.mrsp_data.mrsp_buf =
-              malloc(rsp->mrsp_un.mrsp_data.mrsp_nbytes)) == NULL) {
-            *errp = -1;
+
+      if (used > nbytes || *errp) {
+         return used;
+      }
+
+      data_bytes = rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+
+      if (sizerem(nbytes, used) >= data_nbytes && data_nbytes > 0) {
+         if ((rsp->mrsp_un.mrsp_data.mrsp_buf = malloc(data_nbytes)) == NULL) {
+            *errp = 1;
             return 0;
          }
-         memcpy(rsp->mrsp_un.mrsp_data.mrsp_buf, buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_nbytes);
+         memcpy(rsp->mrsp_un.mrsp_data.mrsp_buf, buf_ + used, data_nbytes);
       }
-      used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      used += data_nbytes;
       break;
       
    case MRSP_ERR:
