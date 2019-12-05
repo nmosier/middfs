@@ -200,10 +200,14 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    enum handler_e retv = HS_DEL;
    int fd = -1;
    char *buf = req->mreq_data;
+
+   /* intiailize rsp with error */
+   rsp->mrsp_type = MRSP_ERR;
    
    /* open file */
    if ((fd = open(path, O_WRONLY)) < 0) {
       perror("open");
+      rsp->mrsp_un.mrsp_error = errno;
       goto cleanup;
    }
 
@@ -215,14 +219,16 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    ssize_t bytes_written;
    if ((bytes_written = pwrite(fd, buf, size, offset)) < 0) {
       perror("write");
+      rsp->mrsp_un.mrsp_error = errno;
       goto cleanup;
    }
    
    /* construct response */
-   /* TODO: Create adequate response type first. 
-    * For now, drop the connection. 
-    */
-   retv = HS_DEL;
+   rsp->mrsp_type = MRSP_OK;
+   rsp->mrsp_un.mrsp_data.mrsp_nbytes = 0;
+   rsp->mrsp_un.mrsp_data.mrsp_buf = NULL;
+   
+   retv = HS_SUC;
    
  cleanup:
    if (fd >= 0) {

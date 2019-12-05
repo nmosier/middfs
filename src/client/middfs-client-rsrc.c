@@ -526,7 +526,7 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
             return -errno;
          }
          
-         struct middfs_packet pkt =
+         struct middfs_packet out_pkt =
             {.mpkt_magic = MPKT_MAGIC,
              .mpkt_type = MPKT_REQUEST,
              .mpkt_un = {.mpkt_request = {.mreq_type = MREQ_WRITE,
@@ -538,6 +538,7 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
                                           }
                          }
             };
+         struct middfs_packet in_pkt;
 
          /* open connection with server */
          int fd = -1;
@@ -550,12 +551,18 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
             return -errno;
          }
 
-         retv = packet_send(fd, &pkt);
+         retv = packet_send(fd, &out_pkt);
 
-         /* NOTE: don't read response.
-          * TODO: read response. */
+         /* read response */
+         if ((retv = packet_recv(fd, &in_pkt)) < 0) {
+            goto cleanup_network;
+         }
 
-         /* cleanup */
+         /* validate response */
+         assert(in_pkt.mpkt_magic == MPKT_MAGIC);
+         assert(in_pkt.mpkt_type == MPKT_RESPONSE);
+
+      cleanup_network:
          if (fd >= 0) {
             close(fd);
          }
