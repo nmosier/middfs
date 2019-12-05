@@ -138,7 +138,7 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
 
      struct middfs_sockinfo new_sockinfo;
      enum handler_e status = handle_socket_event(&socks->sockinfos[index], hi, &new_sockinfo);
-
+     
      switch (status) {
      case HS_SUC:
         break;

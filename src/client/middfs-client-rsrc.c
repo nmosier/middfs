@@ -441,7 +441,7 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
    case MR_NETWORK:
       {
          /* construct packet */
-         struct middfs_packet pkt =
+         struct middfs_packet out_pkt =
             {.mpkt_magic = MPKT_MAGIC,
              .mpkt_type = MPKT_REQUEST,
              .mpkt_un = {.mpkt_request = {.mreq_type = MREQ_READ,
@@ -452,6 +452,7 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
                                           }
                          }
             };
+	 struct middfs_packet in_pkt = {0};
 
          /* open connection with server */
          int fd = -1;
@@ -465,22 +466,22 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          }
          
          /* send packet */
-         if ((retv = packet_send(fd, &pkt)) < 0) {
+         if ((retv = packet_send(fd, &out_pkt)) < 0) {
             goto cleanup_network;
          }
 
          /* read response */
-         if ((retv = packet_recv(fd, &pkt)) < 0) {
+         if ((retv = packet_recv(fd, &in_pkt)) < 0) {
             goto cleanup_network;
          }
 
          /* validate response */
-         assert(pkt.mpkt_magic == MPKT_MAGIC);
-         assert(pkt.mpkt_type == MPKT_RESPONSE);
+         assert(in_pkt.mpkt_magic == MPKT_MAGIC);
+         assert(in_pkt.mpkt_type == MPKT_RESPONSE);
 
          /* copy data from response */
-         size_t nbytes = MIN(size, pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_nbytes);
-         memcpy(buf, pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_buf, nbytes);
+         size_t nbytes = MIN(size, in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_nbytes);
+         memcpy(buf, in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_buf, nbytes);
          retv = nbytes;
 
       cleanup_network:
