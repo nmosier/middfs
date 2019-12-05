@@ -65,10 +65,23 @@ bool req_has_to(enum middfs_request_type type);
 bool req_has_off(enum middfs_request_type type);
 bool req_has_data(enum middfs_request_type type);
 
+enum middfs_response_type
+   {MRSP_OK,
+    MRSP_ERR,
+   };
+
+
 /* TODO: response will definintely need to be changed in the future. */
 struct middfs_response {
-   uint64_t nbytes;
-   void *data;
+   enum middfs_response_type mrsp_type;
+   
+   union {
+      struct {
+         void *mrsp_buf;                      /* set to NULL if no data to send */
+         uint64_t mrsp_nbytes;                /* set to zero if no data to send */
+      } mrsp_data;
+      int32_t mrsp_error;                     /* errno error code */
+   } mrsp_un;
 };
 
 /* CONNECT PACKET

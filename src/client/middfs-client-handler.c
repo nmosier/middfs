@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "lib/middfs-handler.h"
 #include "lib/middfs-conn.h"
@@ -23,21 +24,7 @@ static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
    
   assert(sockinfo->state == MSS_REQRD);
 
-#if 0
-  /* Formulate response packet */
-  char *placeholder_string = "Greetings from a client of middfs.\n";
-
-  struct middfs_response rsp =
-    {.nbytes = strlen(placeholder_string) + 1,
-     .data = placeholder_string
-    };
-  struct middfs_packet out_pkt =
-    {.mpkt_magic = MPKT_MAGIC,
-     .mpkt_type = MPKT_RESPONSE,
-     .mpkt_un = {.mpkt_response = rsp}
-    };
-#else
-  struct middfs_packet out_pkt;
+  struct middfs_packet out_pkt = {0};
 
   switch (in_pkt->mpkt_type) {
   case MPKT_NONE:
@@ -62,8 +49,6 @@ static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
   if (retv == HS_DEL) {
      return HS_DEL;
   }
-
-#endif
   
   /* serialize response packet */
   if (buffer_serialize(&out_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
@@ -161,10 +146,14 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    enum handler_e retv = HS_DEL;
    int fd = -1;
    char *buf;
-      
+
+   /* initialize response for failure */
+   rsp->mrsp_type = MRSP_ERR;
+   
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
       perror("open");
+      rsp->mrsp_un.mrsp_error = errno;
       goto cleanup;
    }
 
@@ -175,6 +164,7 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    /* allocate buffer */
    if ((buf = malloc(size)) == NULL) {
       perror("malloc");
+      rsp->mrsp_un.mrsp_error = errno;      
       goto cleanup;
    }
 
@@ -182,12 +172,14 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    ssize_t bytes_read;
    if ((bytes_read = pread(fd, buf, size, offset)) < 0) {
       perror("pread");
+      rsp->mrsp_un.mrsp_error = errno;      
       goto cleanup;
    }
    
    /* construct response */
-   rsp->nbytes = bytes_read;
-   rsp->data = buf;
+   rsp->mrsp_type = MRSP_OK;
+   rsp->mrsp_un.mrsp_data.mrsp_nbytes = bytes_read;
+   rsp->mrsp_un.mrsp_data.mrsp_buf = buf;
    
    /* success */
    retv = HS_SUC;

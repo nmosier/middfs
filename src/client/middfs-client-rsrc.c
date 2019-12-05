@@ -192,7 +192,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      }
      sb->st_uid = getuid();
      sb->st_gid = getgid();
-     sb->st_size = 64; /* TODO: ... */
+     sb->st_size = 64; // 1e10; /* TODO: ... */
      sb->st_blksize = 4096;
      sb->st_blocks = 1;
      sb->st_nlink = 1;
@@ -479,8 +479,8 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          assert(pkt.mpkt_type == MPKT_RESPONSE);
 
          /* copy data from response */
-         size_t nbytes = MIN(size, pkt.mpkt_un.mpkt_response.nbytes);
-         memcpy(buf, pkt.mpkt_un.mpkt_response.data, nbytes);
+         size_t nbytes = MIN(size, pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_nbytes);
+         memcpy(buf, pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_buf, nbytes);
          retv = nbytes;
 
       cleanup_network:

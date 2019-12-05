@@ -28,11 +28,13 @@ TODO
 [ ] factor out identical code in handle_request_{read,write} functions
 [ ] Add code in client_rsrc_create() to open a network socket if the resource resides on the net.
 
-TODO -- CLIENT
 
-
-[ ] Replace usage of asprintf(3) with portable alternative.
-[ ] Fix lchmod
+BUGS
+[ ] (SERVER) double free on receipt of quick successive write requests
+[ ] (SERVER) socket entries not being deleted for writes
+[ ] (CLIENT) assertion fail on receipt of quick successive write requests
+[ ] (CLIENT) sufficiently large read requests hang, perhaps because the responding
+             client doesn't send all the bytes at once
 
 client dir (static, local) vs. client name (determined by server
 upon connecting)

@@ -547,36 +547,73 @@ size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes
    uint8_t *buf_ = (uint8_t *) buf;
    size_t used = 0;
 
-   used += serialize_uint64(rsp->nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
-   if (rsp->nbytes <= sizerem(nbytes, used)) {
-      memcpy(buf_ + used, rsp->data, rsp->nbytes);
-   }
-   used += rsp->nbytes;
+   /* serialize type first */
+   used += serialize_int32(rsp->mrsp_type, buf_ + used, sizerem(nbytes, used));
 
+   switch (rsp->mrsp_type) {
+   case MRSP_OK:
+      /* check if data is present */
+      if (rsp->mrsp_un.mrsp_data.mrsp_buf != NULL && rsp->mrsp_un.mrsp_data.mrsp_nbytes != 0) {
+         /* serialize data */
+         used += serialize_uint64(rsp->mrsp_un.mrsp_data.mrsp_nbytes,
+                                  buf_ + used, sizerem(nbytes, used)); /* size bytes */
+         if (rsp->mrsp_un.mrsp_data.mrsp_nbytes <= sizerem(nbytes, used)) {
+            memcpy(buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_buf,
+                   rsp->mrsp_un.mrsp_data.mrsp_nbytes);
+         }
+         used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      }
+      break;
+      
+   case MRSP_ERR:
+      /* serialize error */
+      used += serialize_int32(rsp->mrsp_un.mrsp_error, buf_ + used, sizerem(nbytes, used));
+      break;
+      
+   default:
+      abort();
+   }
+   
    return used;
 }
 
 size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *rsp, int *errp) {
    const uint8_t *buf_ = (const uint8_t *) buf;
    size_t used = 0;
-   
-   used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &rsp->nbytes, errp);
 
-   /* NOTE: The double comparison of sizerem() is necessary, as rsp->nbytes will only be valid
-    * when sizerem() > 0. */
-   if (*errp == 0 && sizerem(nbytes, used) >= 0 && sizerem(nbytes, used) >= rsp->nbytes
-       && rsp->nbytes > 0) {
-      if ((rsp->data = malloc(rsp->nbytes)) == NULL) {
-         *errp = -1;
-         return 0;
+
+   /* deserialize type */
+   used += deserialize_int32(buf_ + used, sizerem(nbytes, used), (int32_t *) &rsp->mrsp_type, errp);
+
+   switch (rsp->mrsp_type) {
+   case MRSP_OK:
+      used += deserialize_uint64(buf_ + used, sizerem(nbytes, used),
+                                 &rsp->mrsp_un.mrsp_data.mrsp_nbytes, errp);
+      /* NOTE: The double comparison of sizerem() is necessary, as rsp->nbytes will only be valid
+       * when sizerem() > 0. */
+      if (*errp == 0 && sizerem(nbytes, used) >= 0 &&
+          sizerem(nbytes, used) >= rsp->mrsp_un.mrsp_data.mrsp_nbytes
+          && rsp->mrsp_un.mrsp_data.mrsp_nbytes > 0) {
+         if ((rsp->mrsp_un.mrsp_data.mrsp_buf =
+              malloc(rsp->mrsp_un.mrsp_data.mrsp_nbytes)) == NULL) {
+            *errp = -1;
+            return 0;
+         }
+         memcpy(rsp->mrsp_un.mrsp_data.mrsp_buf, buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_nbytes);
       }
-      memcpy(rsp->data, buf_ + used, rsp->nbytes);         
+      used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      break;
+      
+   case MRSP_ERR:
+      used += deserialize_int32(buf_ + used, sizerem(nbytes, used), &rsp->mrsp_un.mrsp_error, errp);
+      break;
+      
+   default:
+      abort();
    }
-   used += rsp->nbytes;
 
    return used;
 }
-
 
 size_t serialize_connect(const struct middfs_connect *conn, void *buf, size_t nbytes) {
    uint8_t *buf_ = (uint8_t *) buf;
