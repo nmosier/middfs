@@ -589,6 +589,11 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
    /* deserialize type */
    used += deserialize_int32(buf_ + used, sizerem(nbytes, used), (int32_t *) &rsp->mrsp_type, errp);
 
+   /* return if couldn't deserialize type */
+   if (used > nbytes) {
+      return used;
+   }
+
    switch (rsp->mrsp_type) {
    case MRSP_OK:
       used += deserialize_uint64(buf_ + used, sizerem(nbytes, used),
