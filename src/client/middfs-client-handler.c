@@ -145,14 +145,14 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
                                           struct middfs_response *rsp) {
    enum handler_e retv = HS_DEL;
    int fd = -1;
-   char *buf;
-
+   char *buf = NULL;
+   
    /* initialize response for failure */
    rsp->mrsp_type = MRSP_ERR;
-   
+      
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
-      perror("open");
+     fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
       rsp->mrsp_un.mrsp_error = errno;
       goto cleanup;
    }
@@ -186,7 +186,7 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    
  cleanup:
    if (retv == HS_DEL) {
-      free(buf);
+     free(buf);
    }
    if (fd >= 0) {
       close(fd);
