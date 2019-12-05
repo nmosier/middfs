@@ -562,10 +562,10 @@ size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes
       /* serialize data size */
       used += serialize_uint64(data_nbytes, buf_ + used, sizerem(nbytes, used)); /* size bytes */
       if (data_nbytes > 0 && data_nbytes <= sizerem(nbytes, used)) {
-         /* serialize buffer */
-         memcpy(buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_buf, rsp->mrsp_un.mrsp_data.mrsp_nbytes);
+	/* serialize buffer */
+	memcpy(buf_ + used, rsp->mrsp_un.mrsp_data.mrsp_buf, data_nbytes);
       }
-      used += rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      used += data_nbytes;
       break;
       
    case MRSP_ERR:
