@@ -126,7 +126,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
       break;
 
    case MREQ_WRITE:
-      retv = handle_request_write(path, req, NULL);
+      retv = handle_request_write(path, req, rsp);
       break;
       
    default:
