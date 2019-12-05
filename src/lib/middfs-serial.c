@@ -426,7 +426,7 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
 			   sizerem(nbytes, used));
   used += serialize_uint32((uint32_t) pkt->mpkt_type, buf_ + used,
 			   sizerem(nbytes, used));
-  
+
   switch (pkt->mpkt_type) {
   case MPKT_REQUEST:
      used += serialize_request(&pkt->mpkt_un.mpkt_request,
@@ -466,6 +466,10 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
                              &pkt->mpkt_magic, errp);
   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used),
                              (uint32_t *) &pkt->mpkt_type, errp);
+
+  if (nbytes < used) {
+     return used;
+  }
   
   switch (pkt->mpkt_type) {
   case MPKT_REQUEST:
