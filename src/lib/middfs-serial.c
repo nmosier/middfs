@@ -603,7 +603,7 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
          return used;
       }
 
-      data_bytes = rsp->mrsp_un.mrsp_data.mrsp_nbytes;
+      data_nbytes = rsp->mrsp_un.mrsp_data.mrsp_nbytes;
 
       if (sizerem(nbytes, used) >= data_nbytes && data_nbytes > 0) {
          if ((rsp->mrsp_un.mrsp_data.mrsp_buf = malloc(data_nbytes)) == NULL) {
