@@ -181,13 +181,7 @@ int middfs_socks_poll(struct middfs_socks *socks) {
   }
 
   /* process all pollfd events */
-  if ((nfds_ready = middfs_socks_check(socks)) < 0) {
-    perror("middfs_socks_check");
-    goto cleanup;
-  }
-
-  /* success */
-  retv = nfds_ready;
+  retv = middfs_socks_check(socks);
 
  cleanup:
   if (pfds != NULL) {
@@ -303,14 +297,12 @@ int middfs_socks_check(struct middfs_socks *socks) {
     int revents;
     if ((revents = middfs_sockinfo_check(&socks->sockinfos[i])) < 0) {
       middfs_socks_remove(i, socks); /* delete entry */
-      perror("middfs_sockinfo_check");
-      err = 1;
     } else if (revents > 0) {
       ++nready;
     }
   }
 
-  return err ? -1 : nready;
+  return nready;
 }
 
 /*********************
@@ -346,15 +338,11 @@ int middfs_sockend_check(struct middfs_sockend *sockend) {
   revents = *sockend->revents;  
   
   if (revents & POLLERR) {
-    return -1;
+     fprintf(stderr, "warning: error condition on socket %d\n", sockend->fd);
+     return -1;
   } else if (revents & POLLHUP) {
      fprintf(stderr, "warning: socket %d disconnected\n", sockend->fd);
-     sockend->fd = -1;
-     if (close(fd) < 0) {
-        perror("close");
-      return -1;
-     }
-     return 0;
+     return -1;
   } else {
      return revents;
   }

@@ -34,3 +34,11 @@ kill:
 mount:
 	$(realpath $(BIN)) 1 # dummy param
 
+.PHONY: debug
+debug:
+	gdb --args $(realpath $(BIN)) 1
+
+.PHONY: mem
+mem:
+	valgrind $(realpath $(BIN)) 1
+
