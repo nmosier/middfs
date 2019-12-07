@@ -184,7 +184,14 @@ int main(int argc, char *argv[]) {
 
   /* start client responder */
   pthread_t client_responder_thread;
-  if (start_client_responder(LISTEN_PORT_DEFAULT_STR, CLIENT_BACKLOG_DEFAULT,
+  int err = 0;
+  uint32_t client_responder_port = get_conf_uint32(MIDDFS_CONF_LOCALPORT, &err);
+  if (err) {
+     perror("get_conf_uint32");
+     goto cleanup;
+  }
+  
+  if (start_client_responder(client_responder_port, CLIENT_BACKLOG_DEFAULT,
                              &client_responder_thread) < 0) {
     perror("start_client_responder");
     goto cleanup;

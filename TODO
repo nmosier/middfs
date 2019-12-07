@@ -35,6 +35,7 @@ BUGS
 [ ] (CLIENT) assertion fail on receipt of quick successive write requests
 [ ] (CLIENT) sufficiently large read requests hang, perhaps because the responding
              client doesn't send all the bytes at once
+[ ] (CLIENT) ``address already in use'' bug -- sends connectin packet anyway
 
 client dir (static, local) vs. client name (determined by server
 upon connecting)
