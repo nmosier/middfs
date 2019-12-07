@@ -478,6 +478,7 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          /* validate response */
          assert(in_pkt.mpkt_magic == MPKT_MAGIC);
          assert(in_pkt.mpkt_type == MPKT_RESPONSE);
+         assert(in_pkt.mpkt_un.mpkt_response.mrsp_type == MRSP_DATA);
 
          /* copy data from response */
          const struct middfs_data *data = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data;
