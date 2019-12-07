@@ -109,5 +109,12 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
 size_t deserialize_connect(const void *buf, size_t nbytes, struct middfs_connect *conn, int *errp);
 size_t serialize_connect(const struct middfs_connect *conn, void *buf, size_t nbytes);
 
+size_t serialize_stat(const struct middfs_stat *st, void *buf, size_t nbytes);
+size_t deserialize_stat(const void *buf, size_t nbytes, struct middfs_stat *st, int *errp);
+
+size_t serialize_data(const struct middfs_data *data, void *buf, size_t nbytes);
+size_t deserialize_data(const void *buf, size_t nbytes, struct middfs_data *data, int *errp);
+
+
 
 #endif

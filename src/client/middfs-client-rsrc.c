@@ -480,8 +480,9 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          assert(in_pkt.mpkt_type == MPKT_RESPONSE);
 
          /* copy data from response */
-         size_t nbytes = MIN(size, in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_nbytes);
-         memcpy(buf, in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data.mrsp_buf, nbytes);
+         const struct middfs_data *data = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data;
+         size_t nbytes = MIN(size, data->mdata_nbytes);
+         memcpy(buf, data->mdata_buf, nbytes);
          retv = nbytes;
 
       cleanup_network:

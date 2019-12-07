@@ -149,7 +149,7 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    char *buf = NULL;
    
    /* initialize response for failure */
-   rsp->mrsp_type = MRSP_ERR;
+   rsp->mrsp_type = MRSP_ERROR;
       
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
@@ -178,9 +178,10 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    }
    
    /* construct response */
-   rsp->mrsp_type = MRSP_OK;
-   rsp->mrsp_un.mrsp_data.mrsp_nbytes = bytes_read;
-   rsp->mrsp_un.mrsp_data.mrsp_buf = buf;
+   rsp->mrsp_type = MRSP_DATA;
+   struct middfs_data *data = &rsp->mrsp_un.mrsp_data;
+   data->mdata_buf = buf;
+   data->mdata_nbytes = bytes_read;
    
    /* success */
    retv = HS_SUC;
@@ -203,7 +204,7 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    char *buf = req->mreq_data;
 
    /* intiailize rsp with error */
-   rsp->mrsp_type = MRSP_ERR;
+   rsp->mrsp_type = MRSP_ERROR;
    
    /* open file */
    if ((fd = open(path, O_WRONLY)) < 0) {
@@ -226,8 +227,6 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    
    /* construct response */
    rsp->mrsp_type = MRSP_OK;
-   rsp->mrsp_un.mrsp_data.mrsp_nbytes = 0;
-   rsp->mrsp_un.mrsp_data.mrsp_buf = NULL;
    
    retv = HS_SUC;
    
@@ -237,4 +236,12 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    }
    
    return retv;
+}
+
+static enum handler_e handle_request_getattr(const char *path, const struct middfs_request *req,
+                                             struct middfs_response *rsp) {
+   enum handler_e retv = HS_DEL;
+   int fd = -1;
+   char *buf;
+   
 }
