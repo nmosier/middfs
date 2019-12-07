@@ -150,18 +150,16 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
 
 static enum handler_e handle_request_read(const char *path, const struct middfs_request *req,
                                           struct middfs_response *rsp) {
-   enum handler_e retv = HS_DEL;
    int fd = -1;
    char *buf = NULL;
    
    /* initialize response for failure */
    rsp->mrsp_type = MRSP_ERROR;
-      
+   
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
-     fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
-      rsp->mrsp_un.mrsp_error = errno;
-      goto cleanup;
+      fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
+      goto error;
    }
 
    /* get read info */
@@ -171,17 +169,17 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    /* allocate buffer */
    if ((buf = malloc(size)) == NULL) {
       perror("malloc");
-      rsp->mrsp_un.mrsp_error = errno;      
-      goto cleanup;
+      goto error;
    }
 
    /* read */
    ssize_t bytes_read;
    if ((bytes_read = pread(fd, buf, size, offset)) < 0) {
-      perror("pread");
-      rsp->mrsp_un.mrsp_error = errno;      
-      goto cleanup;
+      rsp->mrsp_un.mrsp_error = errno;            
+      fprintf(stderr, "pread: ``%s'': %s\n", path, strerror(errno));
+      goto error;
    }
+   close(fd);
    
    /* construct response */
    rsp->mrsp_type = MRSP_DATA;
@@ -189,18 +187,16 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    data->mdata_buf = buf;
    data->mdata_nbytes = bytes_read;
    
-   /* success */
-   retv = HS_SUC;
-   
- cleanup:
-   if (retv == HS_DEL) {
-     free(buf);
-   }
+   return HS_SUC;
+
+ error:
+   free(buf);
    if (fd >= 0) {
       close(fd);
    }
-   
-   return retv;
+   rsp->mrsp_type = MRSP_ERROR;
+   rsp->mrsp_un.mrsp_error = errno;
+   return HS_SUC;
 }
 
 static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,

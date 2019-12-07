@@ -58,3 +58,5 @@ attach:
 .PHONY: kill
 kill:
 	kill -KILL `pgrep middfs-client` `pgrep gdb`
+	umount $(MOUNTPOINT)
+
