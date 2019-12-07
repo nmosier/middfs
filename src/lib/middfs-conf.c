@@ -40,6 +40,35 @@ char *conf_get(const char *name) {
    return val;
 }
 
+unsigned long long conf_get_ull(const char *name, int *errp) {
+   char *str;
+
+   if ((str = conf_get(name)) == NULL) {
+      *errp = 1;
+      errno = EINVAL;
+      return 0;
+   }
+
+   char *endptr;
+   unsigned long long val = strtoull(str, &endptr, 0);
+
+   if (*str == '\0' || *endptr != '\0') {
+      *errp = 1;
+      errno = EINVAL;
+      return 0;
+   }
+
+   return val;
+}
+
+uint32_t conf_get_uint32(const char *name, int *errp) {
+   return (uint32_t) conf_get_ull(name, errp);
+}
+
+uint64_t conf_get_uint64(const char *name, int *errp) {
+   return (uint64_t) conf_get_ull(name, errp);
+}
+
 int conf_set(const char *name, const char *value, int overwrite) {
    /* STUB */
    abort();

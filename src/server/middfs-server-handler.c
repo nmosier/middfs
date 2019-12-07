@@ -87,8 +87,9 @@ static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
       fprintf(stderr, "client_find: client ``%s'' not found\n", recipient_name);
       return HS_DEL; /* Bye bye! */
    }
-   
-   if ((tmpfd = inet_connect(recipient_info->IP, LISTEN_PORT_DEFAULT)) < 0) {
+
+   /* open connection with client responder */
+   if ((tmpfd = inet_connect(recipient_info->IP, recipient_info->port)) < 0) {
       perror("inet_connect");
       return HS_DEL;
    }
@@ -140,10 +141,12 @@ static enum handler_e handle_rsp_wr_fin(struct middfs_sockinfo *sockinfo) {
 
 static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
                                      const struct middfs_packet *in_pkt) {
+
+   const struct middfs_connect *conn = &in_pkt->mpkt_un.mpkt_connect;
    
    /* create client */
    struct client client;
-   if (client_create(&in_pkt->mpkt_un.mpkt_connect, sockinfo->in.fd, &client) < 0) {
+   if (client_create(conn, sockinfo->in.fd, &client) < 0) {
       perror("client_create");
       return HS_DEL;
    }
@@ -154,9 +157,7 @@ static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
       return HS_DEL;
    }
 
-   /* DEBUG: print out info */
-   fprintf(stderr, "new client connected: name = \"%s\", IP = \"%s\"\n", client.username,
-           client.IP);
+   client_print(&client);
 
    return HS_DEL;
 }

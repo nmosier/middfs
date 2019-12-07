@@ -243,10 +243,18 @@ static int client_connect(const char *server_IP, int port, char *username) {
    /* construct connection packet */
    struct middfs_packet conn_pkt =
       {.mpkt_magic = MPKT_MAGIC,
-       .mpkt_type = MPKT_CONNECT,
-       .mpkt_un = {.mpkt_connect = {.name = username}}
+       .mpkt_type = MPKT_CONNECT
       };
+   struct middfs_connect *conn = &conn_pkt.mpkt_un.mpkt_connect;
+   conn->name = username;
 
+   int err = 0;
+   conn->port = conf_get_uint32(MIDDFS_CONF_LOCALPORT, &err);
+   if (err) {
+      fprintf(stderr, "client_connect: invalid local port value ``%s''\n", MIDDFS_CONF_LOCALPORT);
+      goto cleanup;
+   }
+   
    struct buffer buf_out;
    buffer_init(&buf_out);
 
@@ -254,7 +262,7 @@ static int client_connect(const char *server_IP, int port, char *username) {
       perror("buffer_serialize");
       goto cleanup;
    }
-
+   
    while (!buffer_isempty(&buf_out) && buffer_write(sockfd, &buf_out) >= 0) {}
   
    /* success */

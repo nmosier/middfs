@@ -32,6 +32,6 @@ void clients_delete(struct clients *clients);
 void clients_remove(size_t index, struct clients *clients);
 int clients_add(struct client *client, struct clients *clients);
 struct client *client_find(const char *username, const struct clients *clients);
-
+void client_print(const struct client *client);
 
 #endif

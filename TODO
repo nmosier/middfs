@@ -27,7 +27,7 @@ TODO
     other client is not online.
 [ ] factor out identical code in handle_request_{read,write} functions
 [ ] Add code in client_rsrc_create() to open a network socket if the resource resides on the net.
-
+[ ] Handle case when server receives a request but named client is not online.
 
 BUGS
 [ ] (SERVER) double free on receipt of quick successive write requests

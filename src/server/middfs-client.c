@@ -136,6 +136,11 @@ struct client *client_find(const char *username, const struct clients *clients) 
 }
 
 
+void client_print(const struct client *client) {
+   printf("username = %s, port = %u, IP = %s\n", client->username, client->port, client->IP);
+}
+
+
 /* clients_resize() -- resize underlying clients array. 
  * NOTE: This is only for internal use by clients_* functions.
  * NOTE: Deletes any extra elements if downsized. 
@@ -165,4 +170,5 @@ static void clients_sort(struct clients *clients) {
   qsort(clients->vec, clients->cnt, sizeof(*clients->vec), (int (*)(const void *, const void *))
 	client_cmp);
 }
+
 

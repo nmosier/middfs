@@ -13,4 +13,8 @@ int conf_put(const char *string);
 int conf_unset(const char *name);
 int conf_load(const char *path);
 
+unsigned long long conf_get_ull(const char *name, int *errp);
+uint32_t conf_get_uint32(const char *name, int *errp);
+uint64_t conf_get_uint64(const char *name, int *errp);
+
 #endif
