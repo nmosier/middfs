@@ -148,6 +148,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
          request_status = handle_request_fns[req->mreq_type].fd_f(fd, req, rsp);
          
          close(fd);
+         break;
       }
       
       
