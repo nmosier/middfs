@@ -2,6 +2,9 @@
  * Nicholas Mosier & Tommaso Monaco 2019
  */
 
+#define _GNU_SOURCE
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <search.h>

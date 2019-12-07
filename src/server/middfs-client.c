@@ -12,6 +12,8 @@
 
 
 #include "lib/middfs-util.h"
+#include "lib/middfs-pkt.h"
+
 #include "server/middfs-client.h"
 
 static int clients_resize(struct clients *clients, size_t newlen);
@@ -19,46 +21,47 @@ static void clients_sort(struct clients *clients);
 
 /* CLIENT functions */
 
-int client_create(const char *username, int sockfd, struct client *client) {
+int client_create(const struct middfs_connect *conn, int sockfd, struct client *client) {
    int retv = -1;
    
    /* initialize client fields */
-   client->IP = NULL;
-   client->username = NULL;
+   memset(client, 0, sizeof(*client));
    
-   /* duplicate and store string */
-   if ((client->username = strdup(username)) == NULL) {
+   /* obtain address info for _sockfd_ */
+   struct sockaddr_in addr;
+   socklen_t addr_len = sizeof(addr);
+   
+   if (getpeername(sockfd, (struct sockaddr *) &addr, &addr_len) < 0) {
+      perror("getpeername");
+      goto cleanup;
+   }
+   
+   /* get formatted IP string for _sockfd_ */
+   char *IP;
+   if ((IP = inet_ntoa(addr.sin_addr)) == NULL) {
+      perror("inet_ntoa");
       goto cleanup;
    }
 
-  /* obtain address info for _sockfd_ */
-  struct sockaddr_in addr;
-  socklen_t addr_len = sizeof(addr);
+   /* strdup and store username, port, and IP */
+   client->username = strdup(conn->name);
+   client->IP = strdup(IP);
+   if (client->username == NULL || client->IP == NULL) {
+      perror("strdup");
+      goto cleanup;
+   }
 
-  if (getpeername(sockfd, (struct sockaddr *) &addr, &addr_len) < 0) {
-     perror("getsockname");
-     goto cleanup;
-  }
-
-  /* get formatted IP string for _sockfd_ */
-  char *IP;
-  if ((IP = inet_ntoa(addr.sin_addr)) == NULL) {
-     perror("inet_ntoa");
-     goto cleanup;
-  }
-  if ((client->IP = strdup(IP)) == NULL) {
-     perror("strdup");
-     goto cleanup;
-  }
-
-  /* success */
-  retv = 0;
-
+   /* set port */
+   client->port = conn->port;
+   
+   /* success */
+   retv = 0;
+   
  cleanup:
-  if (retv < 0) {
-     client_delete(client);
-  }
-  
+   if (retv < 0) {
+      client_delete(client);
+   }
+   
   return retv;
 }
 

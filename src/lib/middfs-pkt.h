@@ -92,6 +92,7 @@ struct middfs_response {
  */
 struct middfs_connect {
    char *name; /* username of client */
+   uint32_t port; /* port on which to connect to client responder */
 };
 
 struct middfs_disconnect {

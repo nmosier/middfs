@@ -267,9 +267,9 @@ static enum handler_e handle_pkt_rd(struct middfs_sockinfo *sockinfo,
     return HS_DEL; /* delete socket */
   }
   if (bytes_read == 0) {
-    /* data ended prematurely -- remove socket from list */
-    fprintf(stderr, "warning: data ended prematurely for socket %d\n", fd);
-    return HS_DEL;
+     /* data ended prematurely -- remove socket from list */
+     fprintf(stderr, "warning: data ended prematurely for socket %d\n", fd);
+     return HS_DEL;
   }
 
   struct middfs_packet in_pkt;

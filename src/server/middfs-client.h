@@ -5,10 +5,15 @@
 #ifndef __MIDDFS_SERVER_LIST_H
 #define __MIDDFS_SERVER_LIST_H
 
+#include <stdint.h>
+
+#include "lib/middfs-pkt.h"
+
 /* struct client -- information about a connected client */
 struct client {
-  char *username;
-  char *IP;
+   char *username; /* username of connected client */
+   char *IP;       /* IP of connected client */
+   uint32_t port;  /* port number on which to connect to client responder */
 };
 
 struct clients {
@@ -17,7 +22,7 @@ struct clients {
   size_t cnt; /* number of used elements in vector */
 };
 
-int client_create(const char *username, int sockfd, struct client *client);
+int client_create(const struct middfs_connect *conn, int sockfd, struct client *client);
 void client_delete(struct client *client);
 int client_cmp(const struct client *c1, const struct client *c2);
 

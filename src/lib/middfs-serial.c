@@ -630,6 +630,7 @@ size_t serialize_connect(const struct middfs_connect *conn, void *buf, size_t nb
    uint8_t *buf_ = (uint8_t *) buf;
    size_t used = 0;
 
+   used += serialize_uint32(conn->port, buf_ + used, sizerem(nbytes, used));
    used += serialize_str(conn->name, buf_ + used, sizerem(nbytes, used));
    
    return used;
@@ -639,6 +640,7 @@ size_t deserialize_connect(const void *buf, size_t nbytes, struct middfs_connect
    const uint8_t *buf_ = (const uint8_t *) buf;
    size_t used = 0;
 
+   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used), &conn->port, errp);
    used += deserialize_str(buf_ + used, sizerem(nbytes, used), &conn->name, errp);
 
    return used;

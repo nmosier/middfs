@@ -143,7 +143,7 @@ static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
    
    /* create client */
    struct client client;
-   if (client_create(in_pkt->mpkt_un.mpkt_connect.name, sockinfo->in.fd, &client) < 0) {
+   if (client_create(&in_pkt->mpkt_un.mpkt_connect, sockinfo->in.fd, &client) < 0) {
       perror("client_create");
       return HS_DEL;
    }
