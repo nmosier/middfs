@@ -126,23 +126,6 @@ int main(int argc, char *argv[]) {
 
   should_mirror = mounted_mirror = 0;
 
-  /* load configuration from file */
-  char *confpath;
-  if (asprintf(&confpath, "%s/" MIDDFS_CONF_FILENAME, getenv("HOME")) < 0) {
-     perror("asprintf");
-     exit(1);
-  }
-  if (access(confpath, R_OK) == 0) {
-     /* read in config file */
-     fprintf(stderr, "middfs-client: loading configuration from %s\n", confpath);
-     if (conf_load(confpath) < 0) {
-        perror("conf_load");
-        exit(1);
-     }
-  } else {
-     fprintf(stderr, "middfs-client: no configuration file found\n");
-  }
-  
   /* set middfs option defaults */
   middfs_defaultopts(&middfs_opts);
   
@@ -153,6 +136,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (middfs_opts.show_help) {
+     /* show help and exit */     
     show_help(argv[0]);    
     if (fuse_opt_add_arg(&args, "--help") < 0) {
       goto cleanup;
@@ -161,61 +145,34 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  /* load configuration file */
+  char *confpath;
+
+  /* determine conf path to use */
+  if ((confpath = middfs_opts.confpath) == NULL) {
+     if (asprintf(&confpath, "%s/" MIDDFS_CONF_FILENAME, getenv("HOME")) < 0) {
+        perror("asprintf");
+        exit(1);
+     }
+  }
+  
+  if (access(confpath, R_OK) == 0) {
+     /* read in config file */
+     fprintf(stderr, "middfs-client: loading configuration from %s\n", confpath);
+     if (conf_load(confpath) < 0) {
+        perror("conf_load");
+        exit(1);
+     }
+  } else {
+     fprintf(stderr, "middfs-client: no configuration file found\n");
+  }
+
+#if 0
   /* validate options */
   /* convert to absolute path */
   if ((errno = -middfs_abspath(&middfs_opts.homepath)) > 0) {
      perror("middfs_abspath");
      goto cleanup;
-  }
-
-#if 0
-  /* NOTE: mirror dir not required. */
-  if (middfs_opts.mirror_dir != NULL) {
-    should_mirror = 1;
-    
-    /* convert to absolute path */
-    if ((errno = -middfs_abspath(&middfs_opts.mirror_dir)) > 0) {
-      perror("middfs_abspath");
-      goto cleanup;
-    }
-  }
-
-  if (middfs_opts.client_dir == NULL) {
-    fprintf(stderr, "%s: required: --dir=<path>\n", argv[0]);
-    opt_valid = 0;
-  } else {
-    /* convert to absolute path */
-    if ((errno = -middfs_abspath(&middfs_opts.client_dir)) > 0) {
-      perror("middfs_abspath");
-      goto cleanup;
-    }
-  }
-  
-  if (middfs_opts.client_name == NULL) {
-    fprintf(stderr, "%s: required: --name=<path>\n", argv[0]);
-    opt_valid = 0;
-  } else {
-    middfs_conf.client_name = middfs_opts.client_name;
-  }
-  
-  if (!opt_valid) {
-    goto cleanup;
-  }
-
-  /* set local user directory access path */
-  if (should_mirror) {
-    middfs_conf.local_dir = middfs_opts.mirror_dir;
-  } else {
-    middfs_conf.local_dir = middfs_opts.client_dir;
-  }
-  
-  /* set up mirror before FUSE mounts */
-  if (should_mirror) {
-    if (middfs_mirror_mount(middfs_opts.client_dir,
-			    middfs_opts.mirror_dir) < 0) {
-      goto cleanup;
-    }
-    mounted_mirror = 1;
   }
 #endif
 

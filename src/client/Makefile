@@ -21,7 +21,7 @@ MOUNTPOINT = tst
 HOMEPATH = home
 USERNAME = client
 FUSE_ARGS = -s -f # run in foreground & single-threaded
-CLIENT_ARGS = $(FUSE_ARGS) --home=$(HOMEPATH) --name="$(USERNAME)" "$(MOUNTPOINT)"
+CLIENT_ARGS = $(FUSE_ARGS) --conf=./.middfs.conf $(MOUNTPOINT)
 
 # TODO -- C header file dependencies
 

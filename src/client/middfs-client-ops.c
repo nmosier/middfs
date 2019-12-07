@@ -360,11 +360,6 @@ static int middfs_chmod
   return retv;
 }
 
-static int middfs_chown(const char *path, uid_t uid, gid_t gid,
-			struct fuse_file_info *fi) {
-   abort();
-}
-
 static int middfs_truncate
 (
 #if FUSE == 3
@@ -563,9 +558,7 @@ struct fuse_operations middfs_oper =
    .getattr = middfs_getattr,
    .access = middfs_access,
    .readlink = middfs_readlink,
-#if 0
-   .mknod = middfs_mknod,
-#endif
+   // .mknod = middfs_mknod,
    .mkdir = middfs_mkdir,
    .symlink = middfs_symlink,
    .unlink = middfs_unlink,
@@ -573,7 +566,7 @@ struct fuse_operations middfs_oper =
    .rename = middfs_rename,
    .link = middfs_link, /* not supported */
    .chmod = middfs_chmod,
-   .chown = middfs_chown, /* not supported */
+   // .chown = middfs_chown, /* not supported */
    .truncate = middfs_truncate,
    .open = middfs_open,
    .create = middfs_create,

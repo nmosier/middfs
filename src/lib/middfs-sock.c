@@ -156,7 +156,6 @@ ssize_t middfs_socks_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_soc
 int middfs_socks_poll(struct middfs_socks *socks) {
   int retv = -1;
   ssize_t nfds = -1;
-  int nfds_ready = -1;
   struct pollfd *pfds = NULL;
 
   /* determine size of pollfs array */
@@ -290,7 +289,6 @@ int middfs_sockinfo_check(struct middfs_sockinfo *info) {
  * RETV: returns number of sockets with events; -1 on error.
  */
 int middfs_socks_check(struct middfs_socks *socks) {
-  int err = 0;
   int nready = 0;
 
   for (int i = 0; i < socks->count; ++i) {

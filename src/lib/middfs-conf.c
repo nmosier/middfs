@@ -27,8 +27,6 @@ char *conf_get(const char *name) {
       return NULL;
    }
 
-   fprintf(stderr, "envvar=%s\n", envvar);
-
    if ((val = getenv(envvar)) == NULL) {
       errno = EINVAL;
       perror("getenv");
