@@ -23,6 +23,7 @@
 #include "client/middfs-client-rsrc.h"
 #include "client/middfs-client.h"
 #include "client/middfs-client-conf.h"
+#include "client/middfs-client-pkt.h"
 
 /* DEBUGGING */
 #define STAT_EXAMPLE_REG "/write"
