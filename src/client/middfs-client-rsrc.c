@@ -464,53 +464,34 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
             };
          struct middfs_packet in_pkt = {0};
 
-#if 0         
-         /* open connection with server */
-         int fd = -1;
-         const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
-         const char *serverport_str = conf_get(MIDDFS_CONF_SERVERPORT);
-         assert(serverip && *serverip);
-         assert(serverport_str && *serverport_str);
-         
-         if ((fd = inet_connect(serverip, atoi(serverport_str))) < 0) {
-            return -errno;
+         if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
+            return retv;
          }
-         
-         /* send packet */
-         if ((retv = packet_send(fd, &out_pkt)) < 0) {
-            goto cleanup_network;
-         }
-
-         /* read response */
-         if ((retv = packet_recv(fd, &in_pkt)) < 0) {
-            goto cleanup_network;
-         }
-#else
-         if (packet_xchg(&out_pkt, &in_pkt) < 0) {
-            return -1;
-         }
-#endif
 
          /* validate response */
-         assert(in_pkt.mpkt_magic == MPKT_MAGIC);
-         assert(in_pkt.mpkt_type == MPKT_RESPONSE);
-         assert(in_pkt.mpkt_un.mpkt_response.mrsp_type == MRSP_DATA);
-
-         /* copy data from response */
-         const struct middfs_data *data = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data;
-         size_t nbytes = MIN(size, data->mdata_nbytes);
-         memcpy(buf, data->mdata_buf, nbytes);
-         retv = nbytes;
-
-#if 0
-      cleanup_network:
-         if (fd >= 0) {
-            close(fd);
+         if (in_pkt.mpkt_magic != MPKT_MAGIC || in_pkt.mpkt_type != MPKT_RESPONSE) {
+            return -EIO;
          }
-         /* TODO: Delete packet. */
-#endif
          
-         return retv;
+         const struct middfs_response *rsp = &in_pkt.mpkt_un.mpkt_response;
+         switch (rsp->mrsp_type) {
+         case MRSP_DATA:
+            {
+               /* copy data from response */
+               const struct middfs_data *data = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_data;
+               size_t nbytes = MIN(size, data->mdata_nbytes);
+               memcpy(buf, data->mdata_buf, nbytes);
+               retv = nbytes;
+               return retv;
+            }
+            
+         case MRSP_ERROR:
+            /* return specific error */
+            return -rsp->mrsp_un.mrsp_error;
+            
+         default:
+            return -EIO; /* packet corrupted */
+         }
       }
          
    case MR_ROOT:
@@ -521,6 +502,9 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          retv = -errno;
       }
       return retv;
+
+   default:
+      abort();
    }
 }
 
@@ -560,32 +544,14 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
             };
          struct middfs_packet in_pkt;
 
-         /* open connection with server */
-         int fd = -1;
-         const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
-         const char *serverport_str = conf_get(MIDDFS_CONF_SERVERPORT);
-         assert(serverip && *serverip);
-         assert(serverport_str && *serverport_str);
-
-         if ((fd = inet_connect(serverip, atoi(serverport_str))) < 0) {
-            return -errno;
-         }
-
-         retv = packet_send(fd, &out_pkt);
-
-         /* read response */
-         if ((retv = packet_recv(fd, &in_pkt)) < 0) {
-            goto cleanup_network;
+         if (packet_xchg(&out_pkt, &in_pkt) < 0) {
+            return -1;
          }
 
          /* validate response */
          assert(in_pkt.mpkt_magic == MPKT_MAGIC);
          assert(in_pkt.mpkt_type == MPKT_RESPONSE);
-
-      cleanup_network:
-         if (fd >= 0) {
-            close(fd);
-         }
+         assert(in_pkt.mpkt_un.mpkt_response.mrsp_type == MRSP_OK);
          
          return (retv < 0) ? retv : size;
       }
