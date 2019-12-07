@@ -81,6 +81,9 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
                                           struct middfs_response *rsp);
 static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,
                                            struct middfs_response *rsp);
+static enum handler_e handle_request_getattr(const char *path, const struct middfs_request *req,
+                                             struct middfs_response *rsp);
+
 
 /* handle_request() -- handle a request and queue a response (if necessary).
  */
@@ -106,6 +109,9 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
       break;
 
    case MREQ_GETATTR:
+      retv = handle_request_getattr(path, req, rsp);
+      break;
+      
    case MREQ_ACCESS:
    case MREQ_READLINK:
    case MREQ_MKDIR:
@@ -240,8 +246,20 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
 
 static enum handler_e handle_request_getattr(const char *path, const struct middfs_request *req,
                                              struct middfs_response *rsp) {
-   enum handler_e retv = HS_DEL;
-   int fd = -1;
-   char *buf;
-   
+   /* stat file */
+   struct stat st;
+   if (stat(path, &st) < 0) {
+      fprintf(stderr, "stat: ``%s'': %s\n", path, strerror(errno));
+      rsp->mrsp_type = MRSP_ERROR;
+      rsp->mrsp_un.mrsp_error = errno;
+   } else {
+      /* construct response */
+      rsp->mrsp_type = MRSP_STAT;
+      struct middfs_stat *mstat = &rsp->mrsp_un.mrsp_stat;
+      mstat->mstat_size = st.st_size;
+      mstat->mstat_blocks = st.st_blocks;
+      mstat->mstat_blksize = st.st_blksize;
+   }
+
+   return HS_SUC;
 }

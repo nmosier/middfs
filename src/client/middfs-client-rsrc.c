@@ -181,6 +181,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
+#if 0     
      /* TODO: This is slapdash code. Fix later. */
      /* check if path is dir or reg file */
      if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
@@ -196,6 +197,14 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      sb->st_blksize = 4096;
      sb->st_blocks = 1;
      sb->st_nlink = 1;
+#else
+     /* REAL CODE */
+     
+
+
+#endif
+
+     
      return 0;
      
   case MR_ROOT: /* stat info for middfs mountpoint */
@@ -452,8 +461,9 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
                                           }
                          }
             };
-	 struct middfs_packet in_pkt = {0};
+         struct middfs_packet in_pkt = {0};
 
+#if 0         
          /* open connection with server */
          int fd = -1;
          const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
@@ -474,6 +484,11 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          if ((retv = packet_recv(fd, &in_pkt)) < 0) {
             goto cleanup_network;
          }
+#else
+         if (packet_xchg(&out_pkt, &in_pkt) < 0) {
+            return -1;
+         }
+#endif
 
          /* validate response */
          assert(in_pkt.mpkt_magic == MPKT_MAGIC);
@@ -486,11 +501,13 @@ int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t si
          memcpy(buf, data->mdata_buf, nbytes);
          retv = nbytes;
 
+#if 0
       cleanup_network:
          if (fd >= 0) {
             close(fd);
          }
          /* TODO: Delete packet. */
+#endif
          
          return retv;
       }
