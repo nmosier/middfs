@@ -131,14 +131,13 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
       retv = HS_DEL;
       break;
 
-#if 1
    case MREQ_READ:
    case MREQ_WRITE:
       {
          int fd = -1;
          
          /* open file */
-         if ((fd = open(path, O_RDONLY)) < 0) {
+         if ((fd = open(path, O_RDWR)) < 0) {
             fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
             request_status = -errno;
             break;
@@ -150,20 +149,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
          close(fd);
          break;
       }
-      
-      
-#else
-      
-   case MREQ_READ:
-      request_status = handle_request_read(path, req, rsp);
-      break;
-
-   case MREQ_WRITE:
-      request_status = handle_request_write(path, req, rsp);
-      break;
-#endif
-
-      
+            
    default:
       fprintf(stderr, "handle_request: unknown type %d\n", req->mreq_type);
       retv = HS_DEL;
