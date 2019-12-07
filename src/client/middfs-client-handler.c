@@ -77,10 +77,10 @@ struct handler_info client_hi =
 
 
 
-static enum handler_e handle_request_read(const char *path, const struct middfs_request *req,
-                                          struct middfs_response *rsp);
-static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,
-                                           struct middfs_response *rsp);
+static int handle_request_read(const char *path, const struct middfs_request *req,
+                               struct middfs_response *rsp);
+static int handle_request_write(const char *path, const struct middfs_request *req,
+                                struct middfs_response *rsp);
 static enum handler_e handle_request_getattr(const char *path, const struct middfs_request *req,
                                              struct middfs_response *rsp);
 
@@ -89,10 +89,11 @@ static enum handler_e handle_request_getattr(const char *path, const struct midd
  */
 static enum handler_e handle_request(const struct middfs_packet *in_pkt,
                                      struct middfs_packet *out_pkt) {
-   enum handler_e retv = HS_DEL;
+   enum handler_e retv = HS_SUC;
    const struct middfs_request *req = &in_pkt->mpkt_un.mpkt_request;
    struct middfs_response *rsp = &out_pkt->mpkt_un.mpkt_response;
    char *path = NULL;
+   int request_status;
 
    /* response packet setup */
    out_pkt->mpkt_magic = MPKT_MAGIC;
@@ -109,9 +110,6 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
       break;
 
    case MREQ_GETATTR:
-      retv = handle_request_getattr(path, req, rsp);
-      break;
-      
    case MREQ_ACCESS:
    case MREQ_READLINK:
    case MREQ_MKDIR:
@@ -129,11 +127,11 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
       break;
 
    case MREQ_READ:
-      retv = handle_request_read(path, req, rsp);
+      request_status = handle_request_read(path, req, rsp);
       break;
 
    case MREQ_WRITE:
-      retv = handle_request_write(path, req, rsp);
+      request_status = handle_request_write(path, req, rsp);
       break;
       
    default:
@@ -144,17 +142,26 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
 
    /* cleanup */
    free(path);
+
+   if (retv != HS_SUC) {
+      return retv;
+   }
+
+   /* process request status */
+   if (request_status < 0) {
+      /* error */
+      rsp->mrsp_type = MRSP_ERROR;
+      rsp->mrsp_un.mrsp_error = -request_status;
+   }
+   /* otherwise, leave as-is */
    
-   return retv;
+   return HS_SUC;
 }
 
-static enum handler_e handle_request_read(const char *path, const struct middfs_request *req,
-                                          struct middfs_response *rsp) {
+static int handle_request_read(const char *path, const struct middfs_request *req,
+                               struct middfs_response *rsp) {
    int fd = -1;
    char *buf = NULL;
-   
-   /* initialize response for failure */
-   rsp->mrsp_type = MRSP_ERROR;
    
    /* open file */
    if ((fd = open(path, O_RDONLY)) < 0) {
@@ -187,7 +194,7 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    data->mdata_buf = buf;
    data->mdata_nbytes = bytes_read;
    
-   return HS_SUC;
+   return 0;
 
  error:
    free(buf);
@@ -196,23 +203,18 @@ static enum handler_e handle_request_read(const char *path, const struct middfs_
    }
    rsp->mrsp_type = MRSP_ERROR;
    rsp->mrsp_un.mrsp_error = errno;
-   return HS_SUC;
+   return -errno;
 }
 
-static enum handler_e handle_request_write(const char *path, const struct middfs_request *req,
-                                           struct middfs_response *rsp) {
-   enum handler_e retv = HS_DEL;
+static int handle_request_write(const char *path, const struct middfs_request *req,
+                                struct middfs_response *rsp) {
    int fd = -1;
    char *buf = req->mreq_data;
-
-   /* intiailize rsp with error */
-   rsp->mrsp_type = MRSP_ERROR;
    
    /* open file */
    if ((fd = open(path, O_WRONLY)) < 0) {
-      perror("open");
-      rsp->mrsp_un.mrsp_error = errno;
-      goto cleanup;
+      fprintf(stderr, "open: ``%s'': %s\n", path, strerror(errno));
+      goto error;
    }
 
    /* get write info */
@@ -222,22 +224,23 @@ static enum handler_e handle_request_write(const char *path, const struct middfs
    /* write */
    ssize_t bytes_written;
    if ((bytes_written = pwrite(fd, buf, size, offset)) < 0) {
-      perror("write");
-      rsp->mrsp_un.mrsp_error = errno;
-      goto cleanup;
+      perror("pwrite");
+      goto error;
    }
+   close(fd);
    
    /* construct response */
    rsp->mrsp_type = MRSP_OK;
    
-   retv = HS_SUC;
+   return 0;
    
- cleanup:
+ error:
    if (fd >= 0) {
       close(fd);
    }
-   
-   return retv;
+   rsp->mrsp_type = MRSP_ERROR;
+   rsp->mrsp_un.mrsp_error = errno;
+   return -errno;
 }
 
 static enum handler_e handle_request_getattr(const char *path, const struct middfs_request *req,
