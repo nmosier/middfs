@@ -184,10 +184,10 @@ int main(int argc, char *argv[]) {
 
   /* start client responder */
   pthread_t client_responder_thread;
-  int err = 0;
-  uint32_t client_responder_port = get_conf_uint32(MIDDFS_CONF_LOCALPORT, &err);
-  if (err) {
-     perror("get_conf_uint32");
+  char *client_responder_port;
+
+  if ((client_responder_port = conf_get(MIDDFS_CONF_LOCALPORT)) == NULL) {
+     perror("conf_get");
      goto cleanup;
   }
   
