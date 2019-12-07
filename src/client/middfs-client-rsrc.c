@@ -182,7 +182,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-#if 0     
+#if 1
      /* TODO: This is slapdash code. Fix later. */
      /* check if path is dir or reg file */
      if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
