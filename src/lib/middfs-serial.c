@@ -640,7 +640,8 @@ size_t deserialize_connect(const void *buf, size_t nbytes, struct middfs_connect
 size_t serialize_stat(const struct middfs_stat *st, void *buf, size_t nbytes) {
    uint8_t *buf_ = (uint8_t *) buf;
    size_t used = 0;
-
+   
+   used += serialize_uint32(st->mstat_mode, buf_ + used, sizerem(nbytes, used));
    used += serialize_uint64(st->mstat_size, buf_ + used, sizerem(nbytes, used));
    used += serialize_uint64(st->mstat_blocks, buf_ + used, sizerem(nbytes, used));
    used += serialize_uint64(st->mstat_blksize, buf_ + used, sizerem(nbytes, used));
@@ -652,6 +653,7 @@ size_t deserialize_stat(const void *buf, size_t nbytes, struct middfs_stat *st, 
    const uint8_t *buf_ = (const uint8_t *) buf;
    size_t used = 0;
 
+   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used), &st->mstat_mode, errp);
    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &st->mstat_size, errp);
    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &st->mstat_blocks, errp);
    used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &st->mstat_blksize, errp);

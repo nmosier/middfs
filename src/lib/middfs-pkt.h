@@ -66,6 +66,7 @@ bool req_has_off(enum middfs_request_type type);
 bool req_has_data(enum middfs_request_type type);
 
 struct middfs_stat {
+   uint32_t mstat_mode;
    uint64_t mstat_size;
    uint64_t mstat_blocks;
    uint64_t mstat_blksize;

@@ -199,10 +199,42 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      sb->st_blocks = 1;
      sb->st_nlink = 1;
 #else
+     {
      /* REAL CODE */
+     struct middfs_packet out_pkt =
+        {.mpkt_magic = MPKT_MAGIC,
+         .mpkt_type = MPKT_REQUEST};
+     struct middfs_packet in_pkt;
+
+     /* init request */
+     struct middfs_request *req = &out_pkt.mpkt_un.mpkt_request;
+     req->mreq_type = MREQ_GETATTR;
+     req->mreq_requester = conf_get(MIDDFS_CONF_USERNAME);
+     req->mreq_rsrc = client_rsrc->mr_rsrc;
+
+     /* exchange packets & validate response */
+     if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
+        return retv;
+     }
+
+     if (in_pkt.mpkt_type != MPKT_RESPONSE ||
+         in_pkt.mpkt_un.mpkt_response.mrsp_type != MPKT_STAT) {
+        /* bad response */
+        return -EIO;
+     }
      
+     /* set stat buf */
+     const struct middfs_stat *mstat = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_stat;
+     sb->st_mode = mstat->mstat_mode;
+     sb->st_size = mstat->mstat_size;
+     sb->st_blocks = mstat->mstat_blocks;
+     sb->st_blksize = mstat->mstat_blksize;
 
-
+     /* populate other fields */
+     sb->st_uid = getuid();
+     sb->st_gid = getgid();
+     sb->st_nlink = 1;
+     }
 #endif
 
      
