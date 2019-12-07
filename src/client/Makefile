@@ -57,4 +57,4 @@ attach:
 
 .PHONY: kill
 kill:
-	kill -KILL `pgrep middfs-client`
+	kill -KILL `pgrep middfs-client` `pgrep gdb`
