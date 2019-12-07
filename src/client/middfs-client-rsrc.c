@@ -182,7 +182,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-#if 1
+#if 0
      /* TODO: This is slapdash code. Fix later. */
      /* check if path is dir or reg file */
      if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
@@ -218,7 +218,7 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
      }
 
      if (in_pkt.mpkt_type != MPKT_RESPONSE ||
-         in_pkt.mpkt_un.mpkt_response.mrsp_type != MPKT_STAT) {
+         in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_STAT) {
         /* bad response */
         return -EIO;
      }
