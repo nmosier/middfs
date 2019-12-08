@@ -77,10 +77,21 @@ struct middfs_data {
    uint64_t mdata_nbytes;
 };
 
+struct middfs_dirent {
+   char *mde_name;
+   int32_t mde_mode;
+};
+
+struct middfs_dir {
+   uint64_t mdir_count;             /* number of directory entries */
+   struct middfs_dirent *mdir_ents; /* array of directory entries */
+};
+
 enum middfs_response_type
    {MRSP_OK,
     MRSP_DATA,
     MRSP_STAT,
+    MRSP_DIR,
     MRSP_ERROR
    };
 
@@ -91,6 +102,7 @@ struct middfs_response {
       struct middfs_data mrsp_data;           /* read */
       int32_t mrsp_error;                     /* error */
       struct middfs_stat mrsp_stat;           /* getattr */
+      struct middfs_dir mrsp_dir;             /* readdir */
    } mrsp_un;
 };
 

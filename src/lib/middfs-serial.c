@@ -583,6 +583,11 @@ size_t serialize_rsp(const struct middfs_response *rsp, void *buf, size_t nbytes
       /* serialize stat */
       used += serialize_stat(&rsp->mrsp_un.mrsp_stat, buf_ + used, sizerem(nbytes, used));
       break;
+
+   case MRSP_DIR:
+      /* serialize dir */
+      used += serialize_dir(&rsp->mrsp_un.mrsp_dir, buf_ + used, sizerem(nbytes, used));
+      break;
       
    case MRSP_ERROR:
       /* serialize error */
@@ -621,6 +626,11 @@ size_t deserialize_rsp(const void *buf, size_t nbytes, struct middfs_response *r
       /* deserialize stat */
       used += deserialize_stat(buf_ + used, sizerem(nbytes, used), &rsp->mrsp_un.mrsp_stat, errp);
       break;
+
+   case MRSP_DIR:
+      /* deserialize dir */
+      used += deserialize_dir(buf_ + used, sizerem(nbytes, used), &rsp->mrsp_un.mrsp_dir, errp);
+      break;      
       
    case MRSP_ERROR:
       used += deserialize_int32(buf_ + used, sizerem(nbytes, used), &rsp->mrsp_un.mrsp_error, errp);
@@ -668,7 +678,7 @@ size_t serialize_stat(const struct middfs_stat *st, void *buf, size_t nbytes) {
    printf("mode = %o\n"                         \
           "size = %llu\n"                        \
           "blocks = %llu\n"                      \
-          "blksize = %d\n",                      
+          "blksize = %ud\n",                      
           st->mstat_mode,
           st->mstat_size,
           st->mstat_blocks,
@@ -744,6 +754,58 @@ size_t deserialize_data(const void *buf, size_t nbytes, struct middfs_data *data
       memcpy(data->mdata_buf, buf_ + used, data->mdata_nbytes);
    }
    used += data->mdata_nbytes;
+
+   return used;
+}
+
+size_t serialize_dir(const struct middfs_dir *dir, void *buf, size_t nbytes) {
+   uint8_t *buf_ = (uint8_t *) buf;
+   size_t used = 0;
+
+   /* serialize dirent count */
+   used += serialize_uint64(dir->mdir_count, buf_ + used, sizerem(nbytes, used));
+
+   /* serialize entries */
+   for (uint64_t i = 0; i < dir->mdir_count; ++i) {
+      used += serialize_dirent(&dir->mdir_ents[i], buf_ + used, sizerem(nbytes, used));
+   }
+
+   return used;
+}
+
+size_t deserialize_dir(const void *buf, size_t nbytes, struct middfs_dir *dir, int *errp) {
+   const uint8_t *buf_ = (const uint8_t *) buf;
+   size_t used = 0;
+
+   used += deserialize_uint64(buf_ + used, sizerem(nbytes, used), &dir->mdir_count, errp);
+
+   if (*errp || used > nbytes) {
+      return used;
+   }
+
+   for (uint64_t i = 0; i < dir->mdir_count; ++i) {
+      used += deserialize_dirent(buf_ + used, sizerem(nbytes, used), &dir->mdir_ents[i], errp);
+   }
+
+   return used;
+}
+
+size_t serialize_dirent(const struct middfs_dirent *dirent, void *buf, size_t nbytes) {
+   uint8_t *buf_ = (uint8_t *) buf;
+   size_t used = 0;
+
+   used += serialize_str(dirent->mde_name, buf_ + used, sizerem(nbytes, used));
+   used += serialize_int32(dirent->mde_mode, buf_ + used, sizerem(nbytes, used));
+
+   return used;
+}
+
+size_t deserialize_dirent(const void *buf, size_t nbytes, struct middfs_dirent *dirent, int *errp) {
+   const uint8_t *buf_ = (const uint8_t *) buf;
+   size_t used = 0;
+
+   used += deserialize_str(buf_ + used, sizerem(nbytes, used), &dirent->mde_name, errp);
+   used += deserialize_int32(buf_ + used, sizerem(nbytes, used), &dirent->mde_mode, errp);
 
    return used;
 }

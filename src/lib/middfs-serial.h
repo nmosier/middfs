@@ -117,6 +117,10 @@ size_t deserialize_stat(const void *buf, size_t nbytes, struct middfs_stat *st, 
 size_t serialize_data(const struct middfs_data *data, void *buf, size_t nbytes);
 size_t deserialize_data(const void *buf, size_t nbytes, struct middfs_data *data, int *errp);
 
+size_t serialize_dir(const struct middfs_dir *dir, void *buf, size_t nbytes);
+size_t deserialize_dir(const void *buf, size_t nbytes, struct middfs_dir *dir, int *errp);
 
+size_t serialize_dirent(const struct middfs_dirent *dirent, void *buf, size_t nbytes);
+size_t deserialize_dirent(const void *buf, size_t nbytes, struct middfs_dirent *dirent, int *errp);
 
 #endif
