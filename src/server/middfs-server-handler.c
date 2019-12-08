@@ -68,22 +68,68 @@ static enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
 
 
 /* Packet-type specific handlers */
+static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
+                                             const struct middfs_packet *in_pkt,
+                                             struct middfs_packet *out_pkt);
+static enum handler_e handle_req_rd_fin_peer(struct middfs_sockinfo *sockinfo,
+                                             const struct middfs_packet *in_pkt,
+                                             struct middfs_packet *out_pkt);
+
 static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt) {
-   int tmpfd;
-   const struct middfs_packet *out_pkt;
-   struct middfs_packet err_pkt;
+   enum handler_e retv;
+   struct middfs_packet out_pkt;
+
+   /* validate resource */
+   const struct middfs_request *req = &in_pkt->mpkt_un.mpkt_request;
+   const struct rsrc *rsrc = &req->mreq_rsrc;
+   const char *path = rsrc->mr_path;
+   if (strcmp(path, "/") == 0) {
+      /* root resource */
+      retv = handle_req_rd_fin_root(sockinfo, in_pkt, &out_pkt);
+   } else {
+      /* peer resource */
+      retv = handle_req_rd_fin_peer(sockinfo, in_pkt, &out_pkt);
+   }
    
+   if (retv == HS_DEL) {
+      return retv;
+   }
+   
+   if (buffer_serialize(&out_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
+      perror("buffer_serialize");
+      return HS_DEL;
+   }
+      
+   return HS_SUC;
+}
 
-   assert(sockinfo->state == MSS_REQRD);
-   assert(in_pkt->mpkt_type == MPKT_REQUEST);
+/* handle_req_rd_fin_root() -- handle request for resources owned by root 
+ */
+static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
+                                             const struct middfs_packet *in_pkt,
+                                             struct middfs_packet *out_pkt) {
+   /* TODO */
+   packet_error(out_pkt, ENOENT);
+   sockinfo->state = MSS_RSPWR;
+   sockinfo->out.fd = sockinfo->in.fd;
+   sockinfo->in.fd = -1;
+   
+   return HS_SUC;
+}
 
+/* handle_req_rd_fin_peer() -- handle requests for resources owned by peers 
+ */
+static enum handler_e handle_req_rd_fin_peer(struct middfs_sockinfo *sockinfo,
+                                             const struct middfs_packet *in_pkt,
+                                             struct middfs_packet *out_pkt) {
+   int tmpfd;
+   
    /* check if client is online */
    const char *recipient_name = in_pkt->mpkt_un.mpkt_request.mreq_rsrc.mr_owner;
    const struct client *recipient_info;
    if ((recipient_info = client_find(recipient_name, &clients)) == NULL) {
-      out_pkt = &err_pkt;
-      packet_error(&err_pkt, ENOENT);
+      packet_error(out_pkt, ENOENT);
       
       fprintf(stderr, "client_find: client ``%s'' not found\n", recipient_name);
 
@@ -92,7 +138,7 @@ static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
       sockinfo->in.fd = -1;
    } else {
       sockinfo->state = MSS_REQFWD; /* exclusively forward for now. */   
-      out_pkt = in_pkt;
+      *out_pkt = *in_pkt;
       
       /* open connection with client responder */
       if ((tmpfd = inet_connect(recipient_info->IP, recipient_info->port)) < 0) {
@@ -101,14 +147,11 @@ static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
       }
       sockinfo->out.fd = tmpfd;
    }
-   
-   if (buffer_serialize(out_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
-      perror("buffer_serialize");
-      return HS_DEL;
-   }
-      
+
    return HS_SUC;
 }
+
+
 
 static enum handler_e handle_req_wr_fin(struct middfs_sockinfo *sockinfo) {
    assert(sockinfo->state == MSS_REQFWD);
