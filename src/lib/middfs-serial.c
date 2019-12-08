@@ -421,7 +421,7 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
 			size_t nbytes) {
   uint8_t *buf_ = (uint8_t *) buf;
   size_t used = 0;
-  
+
   used += serialize_uint32((uint32_t) pkt->mpkt_magic, buf_ + used,
 			   sizerem(nbytes, used));
   used += serialize_uint32((uint32_t) pkt->mpkt_type, buf_ + used,
@@ -447,6 +447,12 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
     /* TODO -- there aren't any fields to deserialize yet. */
     break;
   }
+
+#if PKT_DEBUG
+  if (used <= nbytes) {
+     fprintf(stderr, "serialized packet (%zu bytes)\n", used);
+  }
+#endif
  
   return used;
 
@@ -467,7 +473,7 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   used += deserialize_uint32(buf_ + used, sizerem(nbytes, used),
                              (uint32_t *) &pkt->mpkt_type, errp);
 
-  if (nbytes < used) {
+  if (nbytes < used || *errp) {
      return used;
   }
   
@@ -493,8 +499,18 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
      /* TODO -- there aren't any fields to deserialize yet. */
      break;
   }
-  
-  return *errp ? 0 : used;
+
+  if (*errp) {
+     return 0;
+  }
+
+#if PKT_DEBUG
+  if (used <= nbytes) {
+     fprintf(stderr, "deserialized packet (%zu bytes)\n", used);
+  }
+#endif
+
+  return used;
 }
 
 

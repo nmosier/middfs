@@ -12,6 +12,8 @@
 #include "middfs-rsrc.h"
 #include "middfs-pkt.h"
 
+#define PKT_DEBUG 1
+
 /* (De)serialization function prototypes */
 typedef size_t (*serialize_f)(const void *ptr, void *buf,
 			      size_t nbytes);
