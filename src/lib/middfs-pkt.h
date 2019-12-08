@@ -120,9 +120,12 @@ struct middfs_packet {
   } mpkt_un;
 };
 
-int packet_handle_none(struct middfs_packet *pkt);
-int packet_handle_connect(struct middfs_packet *pkt);
-int packet_handle_disconnect(struct middfs_packet *pkt);
-int packet_handle_request(struct middfs_packet *pkt);
+// int packet_handle_none(struct middfs_packet *pkt);
+// int packet_handle_connect(struct middfs_packet *pkt);
+// int packet_handle_disconnect(struct middfs_packet *pkt);
+// int packet_handle_request(struct middfs_packet *pkt);
+
+void packet_error(struct middfs_packet *pkt, int error);
+
 
 #endif

@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 
 #include "lib/middfs-handler.h"
@@ -11,8 +12,6 @@
 #include "server/middfs-client.h"
 #include "server/middfs-server-handler.h"
 #include "server/middfs-server.h"
-
-// #define CLIENTB "140.233.167.124" // nmosier's MacBook
 
 static enum handler_e handle_pkt_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt);
@@ -72,33 +71,42 @@ static enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
 static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt) {
    int tmpfd;
+   const struct middfs_packet *out_pkt;
+   struct middfs_packet err_pkt;
+   
 
    assert(sockinfo->state == MSS_REQRD);
    assert(in_pkt->mpkt_type == MPKT_REQUEST);
-   
-   sockinfo->state = MSS_REQFWD; /* exclusively forward for now. */
 
    /* check if client is online */
    const char *recipient_name = in_pkt->mpkt_un.mpkt_request.mreq_rsrc.mr_owner;
    const struct client *recipient_info;
    if ((recipient_info = client_find(recipient_name, &clients)) == NULL) {
-      /* could not find recipient in client list */
-      /* TODO: Special response type to handle this situation? */
+      out_pkt = &err_pkt;
+      packet_error(&err_pkt, ENOENT);
+      
       fprintf(stderr, "client_find: client ``%s'' not found\n", recipient_name);
-      return HS_DEL; /* Bye bye! */
-   }
 
-   /* open connection with client responder */
-   if ((tmpfd = inet_connect(recipient_info->IP, recipient_info->port)) < 0) {
-      perror("inet_connect");
-      return HS_DEL;
+      sockinfo->state = MSS_RSPWR;
+      sockinfo->out.fd = sockinfo->in.fd;
+      sockinfo->in.fd = -1;
+   } else {
+      sockinfo->state = MSS_REQFWD; /* exclusively forward for now. */   
+      out_pkt = in_pkt;
+      
+      /* open connection with client responder */
+      if ((tmpfd = inet_connect(recipient_info->IP, recipient_info->port)) < 0) {
+         perror("inet_connect");
+         return HS_DEL;
+      }
+      sockinfo->out.fd = tmpfd;
    }
-   sockinfo->out.fd = tmpfd;
-   if (buffer_serialize(in_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
+   
+   if (buffer_serialize(out_pkt, (serialize_f) serialize_pkt, &sockinfo->out.buf) < 0) {
       perror("buffer_serialize");
       return HS_DEL;
    }
-
+      
    return HS_SUC;
 }
 
@@ -170,6 +178,3 @@ struct handler_info server_hi =
   {.rd_fin = handle_pkt_rd_fin,
    .wr_fin = handle_pkt_wr_fin
   };
-
-
-
