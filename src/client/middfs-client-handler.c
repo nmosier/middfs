@@ -251,5 +251,9 @@ static int handle_request_getattr(const char *path, const struct middfs_request 
    mstat->mstat_blocks = st.st_blocks;
    mstat->mstat_blksize = st.st_blksize;
 
+#if DEBUG
+   
+#endif
+   
    return 0;
 }
