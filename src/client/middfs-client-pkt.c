@@ -59,7 +59,7 @@ int packet_recv(int fd, struct middfs_packet *pkt) {
    while ((retv = buffer_deserialize(pkt, (deserialize_f) deserialize_pkt, &buf)) > 0) {
       int read_retv;
       /* NOTE: Be careful to not treat interrupt as error. */
-      if ((read_retv = buffer_read(fd, &buf)) < 0) {
+      if ((read_retv = buffer_read(fd, &buf)) <= 0) {
          break;
       }
    }
