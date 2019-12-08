@@ -6,6 +6,7 @@
 #define __MIDDFS_CONF_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 char *conf_get(const char *name);
 int conf_set(const char *name, const char *value, int overwrite);
