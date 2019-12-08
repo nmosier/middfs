@@ -251,18 +251,6 @@ static int handle_request_getattr(const char *path, const struct middfs_request 
    mstat->mstat_blocks = st.st_blocks;
    mstat->mstat_blksize = st.st_blksize;
 
-#if DEBUG
-      /* print out stat info */
-   printf("mode = %o\n"                         \
-          "size = %llu\n"                        \
-          "blocks = %llu\n"                      \
-          "blksize = %d\n",                    \
-          sb.st_mode,
-          sb.st_size,
-          sb.st_blocks,
-          sb.st_blksize
-          );
-#endif
    
    return 0;
 }
