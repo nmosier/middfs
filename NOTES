@@ -87,3 +87,11 @@ MODIFICATION OF SOCKET ARRAY TO HANDLE FORWARDING
 
 
 
+#########################
+
+ABSTRACT OUTLINE OF HANDLE_REQUEST_* FUNCTIONS
+
+1. open file -> fd
+2. req, fd -> <handler-specific code> -> rsp
+3. fd -> close file
+

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "lib/middfs-conf.h"
 #include "lib/middfs-serial.h"
@@ -31,7 +32,7 @@ int packet_send(int fd, const struct middfs_packet *pkt) {
    }
    while (!buffer_isempty(&buf)) {
       int write_retv;
-      if ((write_retv = buffer_write(fd, &buf)) < 0 && write_retv != EINTR) {
+      if ((write_retv = buffer_write(fd, &buf)) < 0 && errno != EINTR) {
          retv = -errno;
          break;
       }
@@ -58,16 +59,15 @@ int packet_recv(int fd, struct middfs_packet *pkt) {
    while ((retv = buffer_deserialize(pkt, (deserialize_f) deserialize_pkt, &buf)) > 0) {
       int read_retv;
       /* NOTE: Be careful to not treat interrupt as error. */
-      if ((read_retv = buffer_read(fd, &buf)) < 0 && read_retv != EINTR) {
-         retv = -errno;
-         goto cleanup;
+      if ((read_retv = buffer_read(fd, &buf)) < 0) {
+         break;
       }
    }
    if (retv < 0) {
       retv = -errno;
    }
    
- cleanup:
+   /* cleanup */
    buffer_delete(&buf);
    
    return retv;
@@ -76,24 +76,23 @@ int packet_recv(int fd, struct middfs_packet *pkt) {
 /* packet_xchg() -- exchange packets with server 
  * ARGS: */
 int packet_xchg(const struct middfs_packet *out_pkt, struct middfs_packet *in_pkt) {
-   int retv = -1;
+   int retv = 0;
    const char *serverip = conf_get(MIDDFS_CONF_SERVERIP);
    int err = 0;
    uint32_t serverport = conf_get_uint32(MIDDFS_CONF_SERVERPORT, &err);
 
-   if (serverip == NULL || err) {
-      return -1;
-   }
+   /* validate params */
+   assert(serverip != NULL && err == 0);
 
    /* connect to server */
    int fd;
    if ((fd = inet_connect(serverip, serverport)) < 0) {
-      return -1;
+      return -errno;
    }
 
    /* send packet and receive response */
-   if (packet_send(fd, out_pkt) >= 0 && packet_recv(fd, in_pkt) >= 0) {
-      retv = 0;
+   if (packet_send(fd, out_pkt) < 0 || packet_recv(fd, in_pkt) < 0) {
+      retv = -errno;
    }
 
    close(fd);

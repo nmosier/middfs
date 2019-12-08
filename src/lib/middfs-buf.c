@@ -135,6 +135,7 @@ ssize_t buffer_read(int fd, struct buffer *buf) {
  * ARGS:
  *  - fd: file descriptor to write(2) to
  *  - buf: pointer to buffer struct
+ * RETV: see write(2)
  */
 ssize_t buffer_write(int fd, struct buffer *buf) {
   size_t used = buffer_used(buf);

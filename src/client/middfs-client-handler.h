@@ -11,4 +11,18 @@
 
 extern struct handler_info client_hi;
 
+/* prototype for request handlers that require opening the file */
+typedef int (*handle_request_fd_f)(int fd, const struct middfs_request *req,
+                                   struct middfs_response *rsp);
+
+/* prototype for request handlers that only require the path */
+typedef int (*handle_request_path_f)(const char *path, const struct middfs_request *req,
+                                     struct middfs_response *rsp);
+
+typedef union {
+   handle_request_fd_f fd_f;
+   handle_request_path_f path_f;
+} handle_request_f;
+
+
 #endif
