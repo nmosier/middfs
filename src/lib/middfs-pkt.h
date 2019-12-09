@@ -51,10 +51,10 @@ struct middfs_request {
   struct rsrc mreq_rsrc;
 
   /* request-specific members */
-  int mreq_mode;    /* access, chmod, create, open */
-  uint64_t mreq_size; /* readlink, truncate, read, write */
-  char *mreq_to;    /* symlink, rename */
-  uint64_t mreq_off;  /* read, write */
+   int32_t mreq_mode;    /* access, chmod, create, open */
+   uint64_t mreq_size; /* readlink, truncate, read, write */
+   char *mreq_to;    /* symlink, rename */
+   uint64_t mreq_off;  /* read, write */
    void *mreq_data; /* write */
   
   /* (none): getattr, unlink, getattr, rmdir, readdir */
@@ -139,6 +139,12 @@ struct middfs_packet {
 // int packet_handle_request(struct middfs_packet *pkt);
 
 void packet_error(struct middfs_packet *pkt, int error);
+
+void request_init(struct middfs_request *req, enum middfs_request_type type,
+                  const struct rsrc *rsrc);
+void response_init(struct middfs_response *rsp, enum middfs_response_type type);
+int connect_init(struct middfs_connect *conn);
+void packet_init(struct middfs_packet *pkt, enum middfs_packet_type type);
 
 
 #endif

@@ -171,6 +171,8 @@ static int middfs_readdir
   if ((retv = client_rsrc_open(&client_rsrc_tmp, O_RDONLY)) < 0) {
     goto cleanup;
   }
+
+  /* TODO: client_rsrc_readdir */
   
   /* open directory */
   if ((dir = fdopendir(client_rsrc_tmp.mr_fd)) == NULL) {

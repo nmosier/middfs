@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <dirent.h>
 
 #include "lib/middfs-conf.h"
 #include "lib/middfs-pkt.h"
@@ -24,6 +25,7 @@
 #include "client/middfs-client.h"
 #include "client/middfs-client-conf.h"
 #include "client/middfs-client-pkt.h"
+#include "client/middfs-client-fuse.h"
 
 /* DEBUGGING */
 #define STAT_EXAMPLE_REG "/write"
@@ -602,7 +604,89 @@ int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
    }
 }
 
-/***********************************
- *    Network-Related Functions    *
- ***********************************/
 
+int client_rsrc_readdir(struct client_rsrc *rsrc, void *buf, fuse_fill_dir_t filler,
+                        off_t offset) {
+   int retv = 0;
+
+   switch (rsrc->mr_type) {
+   case MR_NETWORK:
+   case MR_ROOT:
+      {
+         /* construct a readdir request */
+         struct middfs_packet in_pkt;
+         struct middfs_packet out_pkt;
+         packet_init(&out_pkt, MPKT_REQUEST);
+         request_init(&out_pkt.mpkt_un.mpkt_request, MREQ_READDIR, &rsrc->mr_rsrc);
+
+         if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
+            return retv;
+         }
+
+         /* validate response */
+         if (in_pkt.mpkt_type != MPKT_RESPONSE ||
+             in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_DIR) {
+            return -EIO;
+         }
+         const struct middfs_dir *dir = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_dir;
+
+         /* decode and fill buffer with dirents */
+         for (uint64_t i = 0; i < dir->mdir_count; ++i) {
+            const struct middfs_dirent *dirent = &dir->mdir_ents[i];
+            struct stat st;
+            memset(&st, 0, sizeof(st));
+            st.st_mode = dirent->mde_mode;
+            if (filler(
+#if FUSE == 3	       
+                       buf, dirent->mde_name, &st, 0, 0
+#else
+                       buf, dirent->mde_name, &st, 0
+#endif
+                       )) {
+               break; /* buffer full */
+            }
+         }
+         break;
+      }
+
+   case MR_LOCAL:
+      {
+         DIR *dir = NULL;
+         struct dirent *dir_entry;
+         /* open directory */
+         if ((dir = fdopendir(rsrc->mr_fd)) == NULL) {
+            return -errno;
+         }
+  
+         while ((dir_entry = readdir(dir)) != NULL) {
+            struct stat st;
+            memset(&st, 0, sizeof(st));
+            st.st_ino = dir_entry->d_ino;
+            st.st_mode = dir_entry->d_type << 12; /* no clue... */
+    
+            if (filler(
+#if FUSE == 3	       
+                       buf, dir_entry->d_name, &st, 0, 0
+#else
+                       buf, dir_entry->d_name, &st, 0
+#endif
+                       )) {
+               break; /* buffer full */
+            }
+         }
+  
+         if (closedir(dir) < 0) {
+            retv = -errno;
+         } else {
+            rsrc->mr_fd = -1; /* closedir deleted the fd */
+         }
+
+         break;
+      }
+
+   default:
+      abort();
+   }
+
+   return retv;
+}
