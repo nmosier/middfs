@@ -272,7 +272,7 @@ static enum handler_e handle_pkt_rd(struct middfs_sockinfo *sockinfo,
      return HS_DEL;
   }
 
-  struct middfs_packet in_pkt;
+  struct middfs_packet in_pkt = {0};
   int errp = 0;
   size_t bytes_ready = buffer_used(buf_in);
   size_t bytes_required = deserialize_pkt(buf_in->begin, bytes_ready, &in_pkt, &errp);
