@@ -783,6 +783,14 @@ size_t deserialize_dir(const void *buf, size_t nbytes, struct middfs_dir *dir, i
       return used;
    }
 
+   /* allocate dirent array */
+   if (dir->mdir_ents == NULL) {
+      if ((dir->mdir_ents = calloc(dir->mdir_count, sizeof(*dir->mdir_ents))) == NULL) {
+         *errp = 1;
+         return 0;
+      }
+   }
+
    for (uint64_t i = 0; i < dir->mdir_count; ++i) {
       used += deserialize_dirent(buf_ + used, sizerem(nbytes, used), &dir->mdir_ents[i], errp);
    }
