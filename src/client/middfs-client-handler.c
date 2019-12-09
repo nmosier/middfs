@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
 
 #include "lib/middfs-handler.h"
 #include "lib/middfs-conn.h"
@@ -83,11 +84,14 @@ static int handle_request_write(int fd, const struct middfs_request *req,
                                 struct middfs_response *rsp);
 static int handle_request_getattr(const char *path, const struct middfs_request *req,
                                   struct middfs_response *rsp);
+static int handle_request_readdir(const char *path, const struct middfs_request *req,
+                                  struct middfs_response *rsp);
 
 static handle_request_f handle_request_fns[MREQ_NTYPES] =
    {[MREQ_READ] = {.fd_f = handle_request_read},
     [MREQ_WRITE] = {.fd_f = handle_request_write},
     [MREQ_GETATTR] = {.path_f = handle_request_getattr},
+    [MREQ_READDIR] = {.path_f = handle_request_readdir},
    };
 
 
@@ -118,6 +122,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
 
       /* PATH HANDLERS */
    case MREQ_GETATTR:
+   case MREQ_READDIR:      
       request_status = handle_request_fns[req->mreq_type].path_f(path, req, rsp);
       break;
       
@@ -132,7 +137,6 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_TRUNCATE:
    case MREQ_OPEN:
    case MREQ_CREATE:
-   case MREQ_READDIR:
       fprintf(stderr, "handle_request: request not implemented yet\n");
       retv = HS_DEL;
       break;
@@ -250,7 +254,48 @@ static int handle_request_getattr(const char *path, const struct middfs_request 
    mstat->mstat_size = st.st_size;
    mstat->mstat_blocks = st.st_blocks;
    mstat->mstat_blksize = st.st_blksize;
-
    
+   return 0;
+}
+
+static int handle_request_readdir(const char *path, const struct middfs_request *req,
+                                  struct middfs_response *rsp) {
+   DIR *dir;
+
+   rsp->mrsp_type = MRSP_DIR;
+
+   /* open directory */
+   if ((dir = opendir(path)) == NULL) {
+      fprintf(stderr, "opendir: ``%s'': %s\n", path, strerror(errno));
+      return -errno;
+   }
+
+   /* count dirents */
+   uint64_t count = 0;
+   while (readdir(dir) != NULL) {
+      ++count;
+   }
+
+   /* allocate list */
+   struct middfs_dir *mdir = &rsp->mrsp_un.mrsp_dir;
+   mdir->mdir_count = count;
+   if ((mdir->mdir_ents = calloc(count, sizeof(*mdir->mdir_ents))) == NULL) {
+      perror("calloc");
+      return -errno;
+   }
+
+   /* rewind dir */
+   rewinddir(dir);
+
+   /* populate dirents */
+   struct dirent *ent;
+   for (struct middfs_dirent *mde = mdir->mdir_ents; (ent = readdir(dir)) != NULL; ++mde) {
+      if ((mde->mde_name = strdup(ent->d_name)) == NULL) {
+         perror("strdup");
+         return -errno;
+      }
+      mde->mde_mode = ent->d_type << 12; /* convert from dirent mode to stat mode */
+   }
+
    return 0;
 }
