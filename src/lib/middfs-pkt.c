@@ -74,5 +74,5 @@ int connect_init(struct middfs_connect *conn) {
 /* packet_init() -- initialize bare packet */
 void packet_init(struct middfs_packet *pkt, enum middfs_packet_type type) {
    pkt->mpkt_magic = MPKT_MAGIC;
-   pkt->mkpt_type = type;
+   pkt->mpkt_type = type;
 }
