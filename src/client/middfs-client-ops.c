@@ -159,18 +159,20 @@ static int middfs_readdir
   struct dirent *dir_entry;
   int retv = 0;
   int res;
-  struct client_rsrc client_rsrc_tmp;
+  struct client_rsrc rsrc;
 
   /* DEBUGGING */
   fprintf(stderr, "``%s''", conf_get(MIDDFS_CONF_HOMEPATH));
   
   /* get resource handle */
-  if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
+  if ((retv = client_rsrc_create(path, &rsrc)) < 0) {
     return retv;
   }
-  if ((retv = client_rsrc_open(&client_rsrc_tmp, O_RDONLY)) < 0) {
+  if ((retv = client_rsrc_open(&rsrc, O_RDONLY)) < 0) {
     goto cleanup;
   }
+
+#if 0
 
   /* TODO: client_rsrc_readdir */
   
@@ -200,11 +202,15 @@ static int middfs_readdir
   if (closedir(dir) < 0) {
     retv = -errno;
   } else {
-    client_rsrc_tmp.mr_fd = -1; /* closedir deleted the fd */
+    rsrc.mr_fd = -1; /* closedir deleted the fd */
   }
 
+#else
+  retv = client_rsrc_readdir(&rsrc, buf, filler, offset);
+#endif
+
  cleanup:
-  if ((res = client_rsrc_delete(&client_rsrc_tmp)) < 0) {
+  if ((res = client_rsrc_delete(&rsrc)) < 0) {
     if (retv >= 0) {
       retv = res;
     }

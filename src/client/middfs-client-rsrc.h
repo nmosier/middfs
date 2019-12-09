@@ -11,6 +11,8 @@
 
 #include "lib/middfs-rsrc.h"
 
+#include "client/middfs-client-fuse.h"
+
 struct client_rsrc {
   /* mr_type: type of resource (local or network)
    * MR_NETWORK: the file is located on the network 
@@ -52,6 +54,8 @@ int client_rsrc_chmod(const struct client_rsrc *client_rsrc, mode_t mode);
 int client_rsrc_read(const struct client_rsrc *client_rsrc, char *buf, size_t size, off_t offset);
 int client_rsrc_write(const struct client_rsrc *client_rsrc, const void *buf,
                       size_t size, off_t offset);
+int client_rsrc_readdir(struct client_rsrc *rsrc, void *buf, fuse_fill_dir_t filler,
+                        off_t offset);
 
 
 #endif
