@@ -138,9 +138,11 @@ int client_rsrc_delete(struct client_rsrc *client_rsrc) {
   return retv;
 }
 
+/* FILE I/O FUNCTIONS */
+
 int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
   va_list args; /* only needed if (flags & O_CREAT) -- will contain
-		 * _mode_ param (for more info man open(2))*/
+                 * _mode_ param (for more info man open(2))*/
   int retv = 0;
   int fd = -1;
   int mode = 0; /* NOTE: This might need to be init'ed to umask(2)? */
@@ -155,8 +157,25 @@ int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
   
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
+     {
+        struct middfs_packet out = {0};
+        struct middfs_packet in  = {0};
+        packet_init(&out, MPKT_REQUEST);
+        request_init(&out.mpkt_un.mpkt_request, MREQ_OPEN, &client_rsrc->mr_rsrc);
+        out.mpkt_un.mpkt_request.mreq_mode = mode;
+        if (packet_xchg(&out, &in) < 0) {
+           perror("packet_xchg");
+           return -EIO;
+        }
+        if ((retv = response_validate(&in, MRSP_OK)) < 0) {
+           return retv;
+        }
+
+        return 0;
+     }
+     
   case MR_ROOT:
-     return 0;
+     return 0; /* TODO -- should send packet */
     
   case MR_LOCAL:
     /* open local file */
