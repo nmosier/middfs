@@ -271,6 +271,7 @@ int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
+  case MR_ROOT:
      {
         struct middfs_packet out = {0};
         struct middfs_packet in = {0};
@@ -288,15 +289,6 @@ int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
         return 0;
      }
      
-  case MR_ROOT:
-     if ((mode & R_OK) == mode) {
-        return 0; /* OK for reading */
-     } else if ((mode & (W_OK | X_OK | R_OK)) == mode) {
-        return -EACCES; /* write or execute request present */
-     } else {
-        return -EINVAL; /* invalid mask bits */
-     }
-
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if (access(localpath, mode) < 0) {
