@@ -88,7 +88,8 @@ int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc) {
 
   if (*owner_begin == '\0') {
     /* requesting middfs root -- special type of request */
-     client_rsrc->mr_rsrc.mr_owner = client_rsrc->mr_rsrc.mr_path = strdup("\0");
+     client_rsrc->mr_rsrc.mr_owner = strdup("\0");
+     client_rsrc->mr_rsrc.mr_path = strdup("\0");
      client_rsrc->mr_type = MR_ROOT;
   } else {
     /* requesting something in a user directory */
