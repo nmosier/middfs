@@ -9,7 +9,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "lib/middfs-util.h"
 #include "lib/middfs-pkt.h"
@@ -171,4 +172,18 @@ static void clients_sort(struct clients *clients) {
 	client_cmp);
 }
 
+/* clients_readdir() -- convert client list into directory format suitable for sending as packet.
+ */
+int clients_readdir(const struct clients *clients, struct middfs_dir *dir) {
+   size_t count = clients->cnt;
+   if ((dir->mdir_ents = calloc(count, sizeof(*dir->mdir_ents))) == NULL) {
+      return -1;
+   }
+   dir->mdir_count = count;
+   for (size_t i = 0; i < count; ++i) {
+      dir->mdir_ents[i].mde_name = strdup(clients->vec[i].username);
+      dir->mdir_ents[i].mde_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR | S_IWUSR;
+   }
 
+   return 0;
+}

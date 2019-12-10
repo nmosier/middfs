@@ -145,6 +145,6 @@ void request_init(struct middfs_request *req, enum middfs_request_type type,
 void response_init(struct middfs_response *rsp, enum middfs_response_type type);
 int connect_init(struct middfs_connect *conn);
 void packet_init(struct middfs_packet *pkt, enum middfs_packet_type type);
-
+void response_error(struct middfs_response *rsp, int error);
 
 #endif
