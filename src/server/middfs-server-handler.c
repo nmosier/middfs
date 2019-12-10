@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "lib/middfs-handler.h"
 #include "lib/middfs-conn.h"
@@ -114,9 +115,23 @@ static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
                                              struct middfs_response *rsp) {
    switch (req->mreq_type) {
    case MREQ_READDIR:
-      rsp->mrsp_type = MRSP_DIR;
+      response_init(rsp, MRSP_DIR);
       if (clients_readdir(&clients, &rsp->mrsp_un.mrsp_dir) < 0) {
          response_error(rsp, errno);
+      }
+      break;
+
+   case MREQ_ACCESS:
+      {
+         int mode = req->mreq_mode;
+         if ((mode & (R_OK | W_OK | X_OK)) != mode) {
+            /* invalid bits are present */
+            response_error(rsp, EINVAL);
+         } else if ((mode & R_OK) == mode) {
+            response_init(rsp, MRSP_OK); /* just asking for read permissions, so OK */
+         } else {
+            response_error(rsp, EACCES); /* asking for write or execute; permission denied */
+         }
       }
       break;
       
