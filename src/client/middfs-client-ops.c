@@ -557,9 +557,9 @@ static int middfs_release(const char *path,
   retv = client_rsrc_delete(client_rsrc);
   free(client_rsrc);
 
-  errno = ENOENT; /* TEST */
+  // errno = ENOENT; /* TEST */
   
-  return retv;
+  return 0;
 }
 
 

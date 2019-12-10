@@ -219,11 +219,8 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
         if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
            return retv;
         }
-
-        if (in_pkt.mpkt_type != MPKT_RESPONSE ||
-            in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_STAT) {
-           /* bad response */
-           return -EIO;
+        if ((retv = response_validate(&in_pkt, MRSP_STAT)) < 0) {
+           return retv;
         }
      
         /* set stat buf */
