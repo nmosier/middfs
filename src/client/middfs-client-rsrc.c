@@ -615,8 +615,8 @@ int client_rsrc_readdir(struct client_rsrc *rsrc, void *buf, fuse_fill_dir_t fil
    case MR_ROOT:
       {
          /* construct a readdir request */
-         struct middfs_packet in_pkt;
-         struct middfs_packet out_pkt;
+         struct middfs_packet in_pkt = {0};
+         struct middfs_packet out_pkt = {0};
          packet_init(&out_pkt, MPKT_REQUEST);
          request_init(&out_pkt.mpkt_un.mpkt_request, MREQ_READDIR, &rsrc->mr_rsrc);
 
