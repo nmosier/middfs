@@ -22,6 +22,10 @@ static enum handler_e handle_req_wr_fin(struct middfs_sockinfo *sockinfo);
 static enum handler_e handle_rsp_rd_fin(struct middfs_sockinfo *sockinfo,
                                         const struct middfs_packet *in_pkt);
 static enum handler_e handle_rsp_wr_fin(struct middfs_sockinfo *sockinfo);
+static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
+                                             const struct middfs_request *req,
+                                             struct middfs_response *rsp);
+
 
 static enum handler_e handle_connect(struct middfs_sockinfo *sockinfo,
                                      const struct middfs_packet *in_pkt);
@@ -68,9 +72,6 @@ static enum handler_e handle_pkt_wr_fin(struct middfs_sockinfo *sockinfo) {
 
 
 /* Packet-type specific handlers */
-static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
-                                             const struct middfs_packet *in_pkt,
-                                             struct middfs_packet *out_pkt);
 static enum handler_e handle_req_rd_fin_peer(struct middfs_sockinfo *sockinfo,
                                              const struct middfs_packet *in_pkt,
                                              struct middfs_packet *out_pkt);
@@ -83,10 +84,12 @@ static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
    /* validate resource */
    const struct middfs_request *req = &in_pkt->mpkt_un.mpkt_request;
    const struct rsrc *rsrc = &req->mreq_rsrc;
-   const char *path = rsrc->mr_path;
-   if (strcmp(path, "/") == 0) {
+   const char *owner = rsrc->mr_path;
+   if (owner == NULL || *owner == '\0') {
       /* root resource */
-      retv = handle_req_rd_fin_root(sockinfo, in_pkt, &out_pkt);
+      packet_init(&out_pkt, MPKT_RESPONSE);
+      retv = handle_req_rd_fin_root(sockinfo, &in_pkt->mpkt_un.mpkt_request,
+                                    &out_pkt.mpkt_un.mpkt_response);
    } else {
       /* peer resource */
       retv = handle_req_rd_fin_peer(sockinfo, in_pkt, &out_pkt);
@@ -107,10 +110,22 @@ static enum handler_e handle_req_rd_fin(struct middfs_sockinfo *sockinfo,
 /* handle_req_rd_fin_root() -- handle request for resources owned by root 
  */
 static enum handler_e handle_req_rd_fin_root(struct middfs_sockinfo *sockinfo,
-                                             const struct middfs_packet *in_pkt,
-                                             struct middfs_packet *out_pkt) {
-   /* TODO */
-   packet_error(out_pkt, ENOENT);
+                                             const struct middfs_request *req,
+                                             struct middfs_response *rsp) {
+   switch (req->mreq_type) {
+   case MREQ_READDIR:
+      rsp->mrsp_type = MRSP_DIR;
+      if (clients_readdir(&clients, &rsp->mrsp_un.mrsp_dir) < 0) {
+         response_error(rsp, errno);
+      }
+      break;
+      
+   default:
+      fprintf(stderr, "handle_req_rd_fin_root: request type not implemented\n");
+      response_error(rsp, ENOENT);
+      break;
+   }
+   
    sockinfo->state = MSS_RSPWR;
    sockinfo->out.fd = sockinfo->in.fd;
    sockinfo->in.fd = -1;

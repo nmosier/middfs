@@ -32,6 +32,11 @@ bool req_has_data(enum middfs_request_type type) {
    return type == MREQ_WRITE;
 }
 
+void response_error(struct middfs_response *rsp, int error) {
+   rsp->mrsp_type = MRSP_ERROR;
+   rsp->mrsp_un.mrsp_error = error;
+}
+
 void packet_error(struct middfs_packet *pkt, int error) {
    pkt->mpkt_magic = MPKT_MAGIC;
    pkt->mpkt_type = MPKT_RESPONSE;
