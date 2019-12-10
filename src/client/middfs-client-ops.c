@@ -105,6 +105,8 @@ static int middfs_access(const char *path, int mode) {
   int res;
   struct client_rsrc client_rsrc_tmp;
 
+  printf("mode = %d\n", mode);
+  
   /* create temporary resource */
   if ((retv = client_rsrc_create(path, &client_rsrc_tmp)) < 0) {
     return retv;
