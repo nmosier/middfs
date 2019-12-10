@@ -33,7 +33,7 @@ struct client_rsrc {
 char *middfs_localpath_tmp(const char *middfs_path);
 int middfs_abspath(char **path);
 
-int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc);
+int client_rsrc_init(const char *path, struct client_rsrc *client_rsrc);
 int client_rsrc_delete(struct client_rsrc *client_rsrc);
 int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...);
 int client_rsrc_lstat(const struct client_rsrc *client_rsrc,

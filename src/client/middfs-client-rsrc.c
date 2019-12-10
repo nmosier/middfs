@@ -74,11 +74,11 @@ int middfs_abspath(char **path) {
  * (e.g. return -errno).
  */
 
-/* client_rsrc_create() -- construct resource from path
+/* client_rsrc_init() -- construct resource from path
  * ARGS:
  * RETV: returns 0 on success; -errno on error.
  */
-int client_rsrc_create(const char *path, struct client_rsrc *client_rsrc) {
+int client_rsrc_init(const char *path, struct client_rsrc *client_rsrc) {
   /* find owner string in _path_ */
   const char *owner_begin = path + strspn(path, "/");
 
