@@ -86,12 +86,15 @@ static int handle_request_getattr(const char *path, const struct middfs_request 
                                   struct middfs_response *rsp);
 static int handle_request_readdir(const char *path, const struct middfs_request *req,
                                   struct middfs_response *rsp);
+static int handle_request_access(const char *path, const struct middfs_request *req,
+                                 struct middfs_response *rsp);
 
 static handle_request_f handle_request_fns[MREQ_NTYPES] =
    {[MREQ_READ] = {.fd_f = handle_request_read},
     [MREQ_WRITE] = {.fd_f = handle_request_write},
     [MREQ_GETATTR] = {.path_f = handle_request_getattr},
     [MREQ_READDIR] = {.path_f = handle_request_readdir},
+    [MREQ_ACCESS] = {.path_f = handle_request_access},
    };
 
 
@@ -297,5 +300,15 @@ static int handle_request_readdir(const char *path, const struct middfs_request 
       mde->mde_mode = ent->d_type << 12; /* convert from dirent mode to stat mode */
    }
 
+   return 0;
+}
+
+
+static int handle_request_access(const char *path, const struct middfs_request *req,
+                                 struct middfs_response *rsp) {
+   if (access(path, req->mreq_mode) < 0) {
+      return -errno;
+   }
+   response_init(rsp, MRSP_OK);
    return 0;
 }

@@ -98,3 +98,27 @@ int packet_xchg(const struct middfs_packet *out_pkt, struct middfs_packet *in_pk
    close(fd);
    return retv;
 }
+
+
+/* response_verify() -- verify that packet is response is of given type. 
+ * ARGS:
+ *  - pkt: packet to verify
+ *  - type: expected type of response. */
+int response_validate(const struct middfs_packet *pkt, enum middfs_response_type type) {
+   if (pkt->mpkt_magic != MPKT_MAGIC) {
+      return -EIO;
+   }
+   if (pkt->mpkt_type != MPKT_RESPONSE) {
+      return -EIO;
+   }
+   const struct middfs_response *rsp = &pkt->mpkt_un.mpkt_response;
+   if (rsp->mrsp_type != type) {
+      if (rsp->mrsp_type == MRSP_ERROR) {
+         return -rsp->mrsp_un.mrsp_error;
+      } else {
+         return -EIO;
+      }
+   }
+
+   return 0;
+}

@@ -41,6 +41,14 @@ client dir (static, local) vs. client name (determined by server
 upon connecting)
 
 
-
-
-
+FUNCTIONALITY
+[ ] read
+[ ] write
+[ ] open
+[ ] getattr
+[ ] truncate
+[ ] readdir
+[ ] mkdir
+[ ] rmdir
+[ ] create
+[ ] rename

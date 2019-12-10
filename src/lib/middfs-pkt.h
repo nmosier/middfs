@@ -133,11 +133,6 @@ struct middfs_packet {
   } mpkt_un;
 };
 
-// int packet_handle_none(struct middfs_packet *pkt);
-// int packet_handle_connect(struct middfs_packet *pkt);
-// int packet_handle_disconnect(struct middfs_packet *pkt);
-// int packet_handle_request(struct middfs_packet *pkt);
-
 void packet_error(struct middfs_packet *pkt, int error);
 
 void request_init(struct middfs_request *req, enum middfs_request_type type,

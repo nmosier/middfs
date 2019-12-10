@@ -156,8 +156,6 @@ int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-     /* TODO: This is a purely temporary measure. 
-      * Write some REAL code next time. */
      return 0;
     
   case MR_LOCAL:
@@ -185,68 +183,48 @@ int client_rsrc_lstat(const struct client_rsrc *client_rsrc,
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
-#if 0
-     /* TODO: This is slapdash code. Fix later. */
-     /* check if path is dir or reg file */
-     if (strcmp(client_rsrc->mr_rsrc.mr_path, "/") != 0) {
-        /* is a regular file */
-        sb->st_mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;
-     } else {
-        /* is a directory */
-        sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;
-     }
-     sb->st_uid = getuid();
-     sb->st_gid = getgid();
-     sb->st_size = 64; // 1e10; /* TODO: ... */
-     sb->st_blksize = 4096;
-     sb->st_blocks = 1;
-     sb->st_nlink = 1;
-#else
      {
-     /* REAL CODE */
-     struct middfs_packet out_pkt =
-        {.mpkt_magic = MPKT_MAGIC,
-         .mpkt_type = MPKT_REQUEST};
-     struct middfs_packet in_pkt;
+        /* REAL CODE */
+        struct middfs_packet out_pkt =
+           {.mpkt_magic = MPKT_MAGIC,
+            .mpkt_type = MPKT_REQUEST};
+        struct middfs_packet in_pkt;
 
-     /* init request */
-     struct middfs_request *req = &out_pkt.mpkt_un.mpkt_request;
-     req->mreq_type = MREQ_GETATTR;
-     req->mreq_requester = conf_get(MIDDFS_CONF_USERNAME);
-     req->mreq_rsrc = client_rsrc->mr_rsrc;
+        /* init request */
+        struct middfs_request *req = &out_pkt.mpkt_un.mpkt_request;
+        req->mreq_type = MREQ_GETATTR;
+        req->mreq_requester = conf_get(MIDDFS_CONF_USERNAME);
+        req->mreq_rsrc = client_rsrc->mr_rsrc;
 
-     /* exchange packets & validate response */
-     if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
-        return retv;
-     }
+        /* exchange packets & validate response */
+        if ((retv = packet_xchg(&out_pkt, &in_pkt)) < 0) {
+           return retv;
+        }
 
-     if (in_pkt.mpkt_type != MPKT_RESPONSE ||
-         in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_STAT) {
-        /* bad response */
-        return -EIO;
-     }
+        if (in_pkt.mpkt_type != MPKT_RESPONSE ||
+            in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_STAT) {
+           /* bad response */
+           return -EIO;
+        }
      
-     /* set stat buf */
-     const struct middfs_stat *mstat = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_stat;
-     sb->st_mode = mstat->mstat_mode;
-     sb->st_size = mstat->mstat_size;
-     sb->st_blocks = mstat->mstat_blocks;
-     sb->st_blksize = mstat->mstat_blksize;
+        /* set stat buf */
+        const struct middfs_stat *mstat = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_stat;
+        sb->st_mode = mstat->mstat_mode;
+        sb->st_size = mstat->mstat_size;
+        sb->st_blocks = mstat->mstat_blocks;
+        sb->st_blksize = mstat->mstat_blksize;
 
-     /* populate other fields */
-     sb->st_uid = getuid();
-     sb->st_gid = getgid();
-     sb->st_nlink = 1;
+        /* populate other fields */
+        sb->st_uid = getuid();
+        sb->st_gid = getgid();
+        sb->st_nlink = 1;
      }
-#endif
 
-     
      return 0;
      
   case MR_ROOT: /* stat info for middfs mountpoint */
-     
      /* mark as directory, read-only for owner & group */
-     sb->st_mode = S_IFDIR | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | S_IWOTH;              /* fis ti*/
+     sb->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH;
      sb->st_uid = getuid(); /* owner is owner of this FUSE process */
      sb->st_gid = getgid(); /* group is group of this FUSE process */
      return 0;
@@ -273,7 +251,7 @@ int client_rsrc_readlink(const struct client_rsrc *client_rsrc,
   case MR_NETWORK:
   case MR_ROOT:
     return -EOPNOTSUPP;
-
+    
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
     if ((retv = readlink(localpath, buf, bufsize)) < 0) {
@@ -293,8 +271,31 @@ int client_rsrc_access(const struct client_rsrc *client_rsrc, int mode) {
 
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
+     {
+        struct middfs_packet out = {0};
+        struct middfs_packet in = {0};
+        packet_init(&out, MPKT_REQUEST);
+        request_init(&out.mpkt_un.mpkt_request, MREQ_ACCESS, &client_rsrc->mr_rsrc);
+        out.mpkt_un.mpkt_request.mreq_mode = mode;
+        if (packet_xchg(&out, &in) < 0) {
+           perror("packet_xchg");
+           return -EIO;
+        }
+        if ((retv = response_validate(&in, MRSP_OK)) < 0) {
+           return retv;
+        }
+
+        return 0;
+     }
+     
   case MR_ROOT:
-     return 0;
+     if ((mode & R_OK) == mode) {
+        return 0; /* OK for reading */
+     } else if ((mode & (W_OK | X_OK | R_OK)) == mode) {
+        return -EACCES; /* write or execute request present */
+     } else {
+        return -EINVAL; /* invalid mask bits */
+     }
 
   case MR_LOCAL:
     localpath = middfs_localpath_tmp(client_rsrc->mr_rsrc.mr_path);
@@ -625,10 +626,10 @@ int client_rsrc_readdir(struct client_rsrc *rsrc, void *buf, fuse_fill_dir_t fil
          }
 
          /* validate response */
-         if (in_pkt.mpkt_type != MPKT_RESPONSE ||
-             in_pkt.mpkt_un.mpkt_response.mrsp_type != MRSP_DIR) {
-            return -EIO;
+         if ((retv = response_validate(&in_pkt, MRSP_DIR)) < 0) {
+            return retv;
          }
+
          const struct middfs_dir *dir = &in_pkt.mpkt_un.mpkt_response.mrsp_un.mrsp_dir;
 
          /* decode and fill buffer with dirents */
