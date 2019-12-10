@@ -125,11 +125,13 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
 
       /* PATH HANDLERS */
    case MREQ_GETATTR:
-   case MREQ_READDIR:      
+   case MREQ_READDIR:
+   case MREQ_ACCESS:
       request_status = handle_request_fns[req->mreq_type].path_f(path, req, rsp);
       break;
+     
+
       
-   case MREQ_ACCESS:
    case MREQ_READLINK:
    case MREQ_MKDIR:
    case MREQ_SYMLINK:
