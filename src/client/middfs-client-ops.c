@@ -411,8 +411,7 @@ static int middfs_truncate
   return retv;
 }
 
-static int middfs_create(const char *path, mode_t mode,
-			 struct fuse_file_info *fi) {
+static int middfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
   int retv = 0;
   struct client_rsrc *client_rsrc = NULL;
 

@@ -323,11 +323,13 @@ static int handle_request_access(const char *path, const struct middfs_request *
 static int handle_request_open(const char *path, const struct middfs_request *req,
                                struct middfs_response *rsp) {
    int fd = -1;
-   if ((fd = open(path, req->mreq_mode)) < 0) {
+   int flags = req->mreq_mode;
+   int mode = 0666;
+   
+   if ((fd = open(path, flags, mode)) < 0) {
       return -errno;
    }
    response_init(rsp, MRSP_OK);
    close(fd);
    return 0;
 }
-

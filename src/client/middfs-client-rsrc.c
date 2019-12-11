@@ -162,7 +162,7 @@ int client_rsrc_open(struct client_rsrc *client_rsrc, int flags, ...) {
         struct middfs_packet in  = {0};
         packet_init(&out, MPKT_REQUEST);
         request_init(&out.mpkt_un.mpkt_request, MREQ_OPEN, &client_rsrc->mr_rsrc);
-        out.mpkt_un.mpkt_request.mreq_mode = mode;
+        out.mpkt_un.mpkt_request.mreq_mode = flags;
         if (packet_xchg(&out, &in) < 0) {
            perror("packet_xchg");
            return -EIO;
