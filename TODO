@@ -46,7 +46,7 @@ FUNCTIONALITY
 [X] write
 [X] open
 [X] getattr
-[ ] truncate
+[X] truncate
 [X] readdir
 [ ] mkdir
 [ ] rmdir

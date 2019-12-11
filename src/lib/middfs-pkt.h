@@ -53,7 +53,7 @@ struct middfs_request {
   /* request-specific members */
    int32_t mreq_mode;    /* access, chmod, create, open */
    uint64_t mreq_size; /* readlink, truncate, read, write */
-   char *mreq_to;    /* symlink, rename */
+   struct rsrc mreq_to;    /* symlink, rename */
    uint64_t mreq_off;  /* read, write */
    void *mreq_data; /* write */
   

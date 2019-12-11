@@ -456,21 +456,48 @@ int client_rsrc_symlink(const struct client_rsrc *client_rsrc,
 int client_rsrc_rename(const struct client_rsrc *from,
 		       const struct client_rsrc *to) {
   int retv = 0;
-  
-  if (from->mr_type == MR_LOCAL && to->mr_type == MR_LOCAL) {
-    char *local_to, *local_from;
-    local_from = middfs_localpath_tmp(from->mr_rsrc.mr_path);
-    local_to = middfs_localpath_tmp(to->mr_rsrc.mr_path);
 
-    if (rename(local_from, local_to) < 0) {
-      retv = -errno;
-    }
+  /* make sure rename is happening in one namespace (LOCAL, NETWORK, or ROOT) */
+  if (from->mr_type != to->mr_type) {
+     return -EXDEV;
+  }
 
-    free(local_to);
-    free(local_from);
-    return retv;
-  } else {
-    return -EOPNOTSUPP;
+  switch (to->mr_type) {
+  case MR_NETWORK:
+  case MR_ROOT:
+     {
+        struct middfs_packet out_pkt = {0};
+        struct middfs_packet in_pkt = {0};
+        packet_init(&out_pkt, MPKT_REQUEST);
+        struct middfs_request *req = &out_pkt.mpkt_un.mpkt_request;
+        request_init(req, MREQ_RENAME, &from->mr_rsrc);
+        req->mreq_to = to->mr_rsrc;
+        if (packet_xchg(&out_pkt, &in_pkt) < 0) {
+           perror("packet_xchg");
+           return -EIO;
+        }
+        if ((retv = response_validate(&in_pkt, MRSP_OK)) < 0) {
+           return retv;
+        }
+        return 0;
+     }
+     
+  case MR_LOCAL:
+     {
+        char *local_to, *local_from;
+        local_from = middfs_localpath_tmp(from->mr_rsrc.mr_path);
+        local_to = middfs_localpath_tmp(to->mr_rsrc.mr_path);
+        
+        if (rename(local_from, local_to) < 0) {
+           retv = -errno;
+        }
+        
+        free(local_to);
+        free(local_from);
+        return retv;
+     }
+  default:
+     abort();
   }
 }
 

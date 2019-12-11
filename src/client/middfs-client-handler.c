@@ -92,7 +92,8 @@ static int handle_request_open(const char *path, const struct middfs_request *re
                                struct middfs_response *rsp);
 static int handle_request_truncate(const char *path, const struct middfs_request *req,
                                    struct middfs_response *rsp);
-
+static int handle_request_rename(const char *path, const struct middfs_request *req,
+                                 struct middfs_response *rsp);
 
 static handle_request_f handle_request_fns[MREQ_NTYPES] =
    {[MREQ_READ] = {.fd_f = handle_request_read},
@@ -102,6 +103,7 @@ static handle_request_f handle_request_fns[MREQ_NTYPES] =
     [MREQ_ACCESS] = {.path_f = handle_request_access},
     [MREQ_OPEN] = {.path_f = handle_request_open},
     [MREQ_TRUNCATE] = {.path_f = handle_request_truncate},
+    [MREQ_RENAME] = {.path_f = handle_request_rename},
    };
 
 
@@ -136,6 +138,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_ACCESS:
    case MREQ_OPEN:
    case MREQ_TRUNCATE:      
+   case MREQ_RENAME:
       request_status = handle_request_fns[req->mreq_type].path_f(path, req, rsp);
       break;
      
@@ -146,7 +149,6 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_SYMLINK:
    case MREQ_UNLINK:
    case MREQ_RMDIR:
-   case MREQ_RENAME:
    case MREQ_CHMOD:
    case MREQ_CREATE:
       fprintf(stderr, "handle_request: request not implemented yet\n");
@@ -344,4 +346,24 @@ static int handle_request_truncate(const char *path, const struct middfs_request
    }
    response_init(rsp, MRSP_OK);
    return 0;
+}
+
+static int handle_request_rename(const char *path, const struct middfs_request *req,
+                                 struct middfs_response *rsp) {
+   int retv = 0;
+   const char *from = path;
+   char *to;
+
+   if ((to = middfs_localpath_tmp(req->mreq_to.mr_path)) == NULL) {
+      perror("middfs_localpath_tmp");
+      return -errno;
+   }
+   if (rename(from, to) < 0) {
+      retv = -errno;
+      fprintf(stderr, "rename: ``%s'' -> ``%s'': %s\n", from, to, strerror(errno));
+   } else {
+      response_init(rsp, MRSP_OK);
+   }
+   free(to);
+   return retv;
 }
