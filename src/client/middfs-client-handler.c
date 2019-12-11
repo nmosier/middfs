@@ -90,6 +90,8 @@ static int handle_request_access(const char *path, const struct middfs_request *
                                  struct middfs_response *rsp);
 static int handle_request_open(const char *path, const struct middfs_request *req,
                                struct middfs_response *rsp);
+static int handle_request_truncate(const char *path, const struct middfs_request *req,
+                                   struct middfs_response *rsp);
 
 
 static handle_request_f handle_request_fns[MREQ_NTYPES] =
@@ -99,6 +101,7 @@ static handle_request_f handle_request_fns[MREQ_NTYPES] =
     [MREQ_READDIR] = {.path_f = handle_request_readdir},
     [MREQ_ACCESS] = {.path_f = handle_request_access},
     [MREQ_OPEN] = {.path_f = handle_request_open},
+    [MREQ_TRUNCATE] = {.path_f = handle_request_truncate},
    };
 
 
@@ -132,6 +135,7 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_READDIR:
    case MREQ_ACCESS:
    case MREQ_OPEN:
+   case MREQ_TRUNCATE:      
       request_status = handle_request_fns[req->mreq_type].path_f(path, req, rsp);
       break;
      
@@ -144,7 +148,6 @@ static enum handler_e handle_request(const struct middfs_packet *in_pkt,
    case MREQ_RMDIR:
    case MREQ_RENAME:
    case MREQ_CHMOD:
-   case MREQ_TRUNCATE:
    case MREQ_CREATE:
       fprintf(stderr, "handle_request: request not implemented yet\n");
       retv = HS_DEL;
@@ -331,5 +334,14 @@ static int handle_request_open(const char *path, const struct middfs_request *re
    }
    response_init(rsp, MRSP_OK);
    close(fd);
+   return 0;
+}
+
+static int handle_request_truncate(const char *path, const struct middfs_request *req,
+                                   struct middfs_response *rsp) {
+   if (truncate(path, req->mreq_size) < 0) {
+      return -errno;
+   }
+   response_init(rsp, MRSP_OK);
    return 0;
 }

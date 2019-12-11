@@ -44,12 +44,12 @@ upon connecting)
 FUNCTIONALITY
 [X] read
 [X] write
-[ ] open
+[X] open
 [X] getattr
 [ ] truncate
 [X] readdir
 [ ] mkdir
 [ ] rmdir
-[ ] create
+[?] create
 [ ] rename
 [X] access

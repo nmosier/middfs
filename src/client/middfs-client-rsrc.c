@@ -394,7 +394,22 @@ int client_rsrc_truncate(const struct client_rsrc *client_rsrc, off_t size) {
   switch (client_rsrc->mr_type) {
   case MR_NETWORK:
   case MR_ROOT:
-    return -EOPNOTSUPP;
+     {
+        struct middfs_packet out = {0};
+        struct middfs_packet in = {0};
+        packet_init(&out, MPKT_REQUEST);
+        struct middfs_request *req = &out.mpkt_un.mpkt_request;
+        request_init(req, MREQ_TRUNCATE, &client_rsrc->mr_rsrc);
+        req->mreq_size = size;
+        if (packet_xchg(&out, &in) < 0) {
+           perror("packet_xchg");
+           return -EIO;
+        }
+        if ((retv = response_validate(&in, MRSP_OK)) < 0) {
+           return retv;
+        }
+        return 0;
+     }
 
   case MR_LOCAL:
     if (client_rsrc->mr_fd >= 0) {
