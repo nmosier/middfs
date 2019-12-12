@@ -447,12 +447,6 @@ size_t serialize_pkt(const struct middfs_packet *pkt, void *buf,
     /* TODO -- there aren't any fields to deserialize yet. */
     break;
   }
-
-#if PKT_DEBUG
-  if (used <= nbytes) {
-     fprintf(stderr, "serialized packet (%zu bytes)\n", used);
-  }
-#endif
  
   return used;
 
@@ -503,12 +497,6 @@ size_t deserialize_pkt(const void *buf, size_t nbytes,
   if (*errp) {
      return 0;
   }
-
-#if PKT_DEBUG
-  if (used <= nbytes) {
-     fprintf(stderr, "deserialized packet (%zu bytes)\n", used);
-  }
-#endif
 
   return used;
 }

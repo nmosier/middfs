@@ -166,7 +166,7 @@ int server_loop(struct middfs_socks *socks, const struct handler_info *hi) {
         return -1;
      }
     
-     fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
+     // fprintf(stderr, "nopen=%d\n", middfs_socks_pack(socks));
   }
   
   return retv;
