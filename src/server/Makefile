@@ -32,7 +32,7 @@ kill:
 
 .PHONY: mount
 mount:
-	$(realpath $(BIN)) 1 # dummy param
+	$(realpath $(BIN)) 1
 
 .PHONY: debug
 debug:

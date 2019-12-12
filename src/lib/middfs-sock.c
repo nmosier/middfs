@@ -237,7 +237,7 @@ size_t middfs_sockinfo_pollfds(struct pollfd *pfds, size_t nfds, struct middfs_s
   size_t used = 0;
 
   /* bail on error */
-  if (*errp != 0) {
+  if (*errp != 0 || info->type == MFD_NONE) {
     return 0;
   }
 
