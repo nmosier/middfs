@@ -10,6 +10,5 @@
 #include "middfs-rsrc.h"
 
 void print_rsrc(const struct rsrc *rsrc) {
-  printf("rsrc @ %p: {.mr_owner = %s, .mr_path = %s}\n",
-	 (void *) rsrc, rsrc->mr_owner, rsrc->mr_path);
+   fprintf(stderr, "{.mr_owner = ``%s'', .mr_path = ``%s''}", rsrc->mr_owner, rsrc->mr_path);
 }

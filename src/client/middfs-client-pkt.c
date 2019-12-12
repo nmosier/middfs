@@ -27,6 +27,9 @@ int packet_send(int fd, const struct middfs_packet *pkt) {
    struct buffer buf;
    buffer_init(&buf);
 
+   fprintf(stderr, "FUSE: ");
+   print_packet(pkt);
+   
    if (buffer_serialize(pkt, (serialize_f) serialize_pkt, &buf) < 0) {
       return -errno;
    }
@@ -65,6 +68,9 @@ int packet_recv(int fd, struct middfs_packet *pkt) {
    }
    if (retv < 0) {
       retv = -errno;
+   } else {
+      fprintf(stderr,"RESP: ");
+      print_packet(pkt);
    }
    
    /* cleanup */

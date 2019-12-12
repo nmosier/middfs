@@ -92,7 +92,8 @@ enum middfs_response_type
     MRSP_DATA,
     MRSP_STAT,
     MRSP_DIR,
-    MRSP_ERROR
+    MRSP_ERROR,
+    MRSP_NTYPES
    };
 
 struct middfs_response {
@@ -129,7 +130,7 @@ struct middfs_packet {
     struct middfs_request mpkt_request;
      struct middfs_response mpkt_response;
     struct middfs_connect mpkt_connect;
-    struct middfs_disconnect mpk_disconnect;
+     // struct middfs_disconnect mpk_disconnect;
   } mpkt_un;
 };
 
@@ -141,5 +142,15 @@ void response_init(struct middfs_response *rsp, enum middfs_response_type type);
 int connect_init(struct middfs_connect *conn);
 void packet_init(struct middfs_packet *pkt, enum middfs_packet_type type);
 void response_error(struct middfs_response *rsp, int error);
+
+/* PRINTING FUNCTIONS */
+void print_request(const struct middfs_request *req);
+void print_response(const struct middfs_response *rsp);
+void print_data(const struct middfs_data *data);
+void print_stat(const struct middfs_stat *st);
+void print_dirent(const struct middfs_dirent *de);
+void print_dir(const struct middfs_dir *dir);
+void print_connect(const struct middfs_connect *conn);
+void print_packet(const struct middfs_packet *pkt);
 
 #endif

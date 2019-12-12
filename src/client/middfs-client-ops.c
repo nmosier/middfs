@@ -157,8 +157,6 @@ static int middfs_readdir
 #endif
 )
 {
-  DIR *dir = NULL;
-  struct dirent *dir_entry;
   int retv = 0;
   int res;
   struct client_rsrc rsrc;
