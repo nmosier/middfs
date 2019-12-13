@@ -14,6 +14,8 @@ After installing fuse, you _will_ need to reboot.
 ### Installing FUSE on macOS
 If you have Homebrew, simply run
 
-```brew cask install osxfuse```
+```bash
+brew cask install osxfuse
+```
 
 Homebrew may list some caveats, e.g. you might need to enable OSXFUSE's kernel extension in System Preferences -> Security & Privacy -> General.
