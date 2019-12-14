@@ -16,9 +16,9 @@ and that the operating system be POSIX-compliant.
 ## Installing FUSE
 FUSE is a library that allows custom filesystems to run in userspsace.
 Here are platform-specific instructions for installing FUSE:
-- [macOS](#Installing FUSE on macOS)
-- [Linux](#Installing FUSE on Linux)
-- [FreeBSD](#Installing FUSE on FreeBSD)
+- [macOS](#InstallingFUSEonmacOS)
+- [Linux](#InstallingFUSEonLinux)
+- [FreeBSD](#InstallingFUSEonFreeBSD)
 After installing fuse, you _will_ need to reboot.
 
 ### Installing FUSE on macOS
