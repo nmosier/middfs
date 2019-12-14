@@ -3,8 +3,8 @@
 ## Nicholas Mosier and Tommaso Monaco
 
 # Table of Contents
-1. [Requirements](# Requirements)
-1. [Installation](# Installation)
+1. [Requirements](#Requirements)
+1. [Installation](#Installation)
 
 # Requirements
 MiddFS can run on any UNIX-based system (theoretically). It _has_ been tested on and is known to work on macOS, Linux, and FreeBSD.
@@ -16,9 +16,9 @@ and that the operating system be POSIX-compliant.
 ## Installing FUSE
 FUSE is a library that allows custom filesystems to run in userspsace.
 Here are platform-specific instructions for installing FUSE:
-- [macOS](# Installing FUSE on macOS)
-- [Linux](# Installing FUSE on Linux)
-- [FreeBSD](# Installing FUSE on FreeBSD)
+- [macOS](#Installing FUSE on macOS)
+- [Linux](#Installing FUSE on Linux)
+- [FreeBSD](#Installing FUSE on FreeBSD)
 After installing fuse, you _will_ need to reboot.
 
 ### Installing FUSE on macOS
