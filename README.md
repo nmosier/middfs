@@ -16,7 +16,7 @@ and that the operating system be POSIX-compliant.
 ## Installing FUSE
 FUSE is a library that allows custom filesystems to run in userspsace.
 Here are platform-specific instructions for installing FUSE:
-- [macOS](#InstallingFUSEonmacOS)
+- [macOS](#install-linux)
 - [Linux](#InstallingFUSEonLinux)
 - [FreeBSD](#InstallingFUSEonFreeBSD)
 After installing fuse, you _will_ need to reboot.
@@ -32,7 +32,7 @@ Homebrew may list some caveats, e.g. you might need to enable OSXFUSE's kernel e
 
 Otherwise, you can directly download the package from [OSXFUSE's GitHub Releases page](https://github.com/osxfuse/osxfuse/releases).
 
-### Installing FUSE on Linux
+### <a name="install-linux"></a> Installing FUSE on Linux
 
 FUSE is installed by default on all major Linux distributions, so you shouldn't need to install it. If you do for some reason, you can install it through your system's package manager.
 
