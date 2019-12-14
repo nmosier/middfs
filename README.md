@@ -3,22 +3,25 @@
 ## Nicholas Mosier and Tommaso Monaco
 
 # Table of Contents
-1. [Requirements](#Requirements)
-1. [Installation](#Installation)
+1. [Requirements](#requirements)
+1. [Installation](#installing-middfs)
+1. [Configuration](#configuring-middfs)
+1. [Usage](#using-middfs)
+1. [Bugs, Errors, Questions](#bugs-errors-questions)
 
 # Requirements
 MiddFS can run on any UNIX-based system (theoretically). It _has_ been tested on and is known to work on macOS, Linux, and FreeBSD.
 
-# Installation
+# Installing MiddFS
 You can install MiddFS on any UNIX-based system (macOS, Linux, FreeBSD, etc.). Its only requirement is that [FUSE](https://github.com/libfuse/libfuse) be installed
 and that the operating system be POSIX-compliant.
 
 ## Installing FUSE
 FUSE is a library that allows custom filesystems to run in userspsace.
 Here are platform-specific instructions for installing FUSE:
-- [macOS](#install-linux)
-- [Linux](#InstallingFUSEonLinux)
-- [FreeBSD](#InstallingFUSEonFreeBSD)
+- [macOS](#installing-fuse-on-macos)
+- [Linux](#installing-fuse-on-linux)
+- [FreeBSD](#installing-fuse-on-freebsd)
 After installing fuse, you _will_ need to reboot.
 
 ### Installing FUSE on macOS
@@ -32,7 +35,7 @@ Homebrew may list some caveats, e.g. you might need to enable OSXFUSE's kernel e
 
 Otherwise, you can directly download the package from [OSXFUSE's GitHub Releases page](https://github.com/osxfuse/osxfuse/releases).
 
-### <a name="install-linux"></a> Installing FUSE on Linux
+### Installing FUSE on Linux
 
 FUSE is installed by default on all major Linux distributions, so you shouldn't need to install it. If you do for some reason, you can install it through your system's package manager.
 
@@ -62,7 +65,7 @@ _Optional_: To put `middfs-client` on your path, simply run
 $ cp middfs/client-sever /usr/local/bin/
 ```
 
-## Configuring MiddFS
+# Configuring MiddFS
 Before mounting MiddFS, you will need to create a configuration file. You can save it anywhere, but the recommended path is `~/.middfs.conf` (in your home directory).
 The MiddFS configuration file requires the following parameters:
 ```
