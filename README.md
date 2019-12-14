@@ -7,6 +7,7 @@
 1. [Installation](#installing-middfs)
 1. [Configuration](#configuring-middfs)
 1. [Usage](#using-middfs)
+1. [Source code](#the-middfs-source-code)
 1. [Bugs, Errors, Questions](#bugs-errors-questions)
 
 # Requirements
@@ -143,6 +144,34 @@ where `<mountpoint>` is the path to the MiddFS mountpoint. If that doesn't work,
 ```
 pkill middfs-client
 ```
+
+# The MiddFS Source Code
+
+The source code to MiddFS is located under `src/`.
+There are three main subdirectories:
+- `src/`
+    - `lib/`
+    - `client/`
+    - `server/`
+
+The `lib/` subdirectory contains shared code used in both the MiddFS server and the MiddFS client.
+The code in `lib/` is compiled into a static library called `lib/middfs-lib.a`; run
+```bash
+$ make lib
+```
+inside `src/` to build the library by itself.
+
+The `client/` subdirectory contains code specific to the MiddFS client. To make the client, run the command
+```bash
+$ make client
+```
+inside `src/`. This produces the executable `src/client/middfs-client`.
+
+The `server/` subdirectory contains code specific to the MiddFS server. To make the server, run the command
+```bash
+$ make server
+```
+inside `src/`. This produces the executable `src/server/middfs-server`.
 
 # Tips
 
