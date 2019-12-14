@@ -118,6 +118,10 @@ localport=4999
 ```
 
 # Using MiddFS
+
+Just like any other filesystem, you need to mount MiddFS before you can use it.
+
+### Mounting MiddFS
 Once you have completed the installation and configuration of MiddFS, you can mount it with the following command:
 ```
 middfs-client --conf=<path/to/middfs/conf> <mountpoint>
@@ -128,6 +132,8 @@ and `<mountpoint>` is the same mountpoint you set in your configuration file (ye
 After successfully mounting MiddFS, a list of directories with the usernames of other connected clients (including you) should appear under your mountpoint. These should act (mostly) like regular directories, but they aren't actually on your hard drive! Any operation you make on these files results in your MiddFS client contacting the server, retrieving the file information from another MiddFS client, and then relaying the results back to your operating system.
 You should be able to create new files, read to and write from files, enter other clients' directories, and more. 
 
+### Unmounting MiddFS
+
 The steps to unmount MiddFS vary platform-to-platform. On macOS, you should be able to right-click on the MiddFS mountpoint in Finder and then select "Eject".
 On any UNIX-based operating system, you can always unmount the MiddFS filesystem using
 ```
@@ -137,6 +143,11 @@ where `<mountpoint>` is the path to the MiddFS mountpoint. If that doesn't work,
 ```
 pkill middfs-client
 ```
+
+# Tips
+
+- MiddFS is generally faster for command-line utilities than for GUI applications (because they are more decisive in their file operations).
+- Having MiddFS open in your file explorer can cause many unnecessary idle file operations and reduce performance in other processes using files on MiddFS. (This problem will be mitigated by optimizations to MiddFS.)
 
 # Bugs, Errors, Questions
 
